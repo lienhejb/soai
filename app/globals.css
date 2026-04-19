@@ -1,26 +1,35 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+@theme {
+  --font-serif: 'Noto Serif', serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Giấy dó - nền tâm linh */
+  --bg-paper: #faf7f2;
+  --bg-paper-2: #f4efe6;
+  --ink: #1a1a1a;
+  --muted: #6b7280;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Vàng kim SoAI */
+  --gold: #d4af37;
+  --gold-deep: #9a7a1f;
+  --gold-soft: #e8d9a8;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  background: var(--bg-paper);
+  color: var(--ink);
+  /* Texture giấy dó nhẹ */
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(212, 175, 55, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(212, 175, 55, 0.04) 0%, transparent 40%);
 }
+
+.font-serif { font-family: var(--font-serif); }
+
+/* Hide scrollbar nhưng vẫn scroll được (voice carousel mobile) */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
