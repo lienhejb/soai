@@ -21,9 +21,13 @@
   --brown-deep: #3a2817;
   --brown-soft: #5a3f26;
 
-  /* Sớ cuốn (cream) */
+  /* Sớ cuốn */
   --paper-scroll: #f5e9c8;
   --paper-scroll-2: #eadbb0;
+
+  /* Hành Lễ dark mode */
+  --soft-gold: #e8b84b;         /* vàng nhạt cho text karaoke */
+  --dark-bg: #0a0808;           /* đen ám nâu đậm */
 }
 
 body {

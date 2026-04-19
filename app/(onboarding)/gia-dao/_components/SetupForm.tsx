@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { VoiceSelector } from './VoiceSelector';
 import { AncestorList } from './AncestorList';
@@ -17,11 +18,13 @@ export function SetupForm({ voices }: Props) {
 
   const canSubmit = ownerName.trim() && address.trim() && selectedVoiceId;
 
+  const router = useRouter();
+
   function handleSubmit() {
-    // Mock — sau này gọi Server Action
-    console.log({ selectedVoiceId, ownerName, address, ancestors });
-    alert('Mockup: Đã lưu cấu hình gia đạo.');
-  }
+  // TODO: Server Action lưu Supabase
+  console.log({ selectedVoiceId, ownerName, address, ancestors });
+  router.push('/dashboard');
+}
 
   return (
     <>
