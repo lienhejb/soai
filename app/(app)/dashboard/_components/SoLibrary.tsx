@@ -36,7 +36,7 @@ export function SoLibrary({ sos }: Props) {
 function SoCard({ so }: { so: UserSo }) {
   return (
     <Link
-      href={`/so/${so.user_so_id}`}
+  href={`/hanh-le/${so.user_so_id}`}
       className="group relative block aspect-[3/4] overflow-hidden rounded-lg bg-gradient-to-b from-[var(--paper-scroll)] to-[var(--paper-scroll-2)] p-3 shadow-sm active:scale-[0.98] active:shadow-none"
       style={{
         backgroundImage: `

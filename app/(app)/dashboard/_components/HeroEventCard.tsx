@@ -33,7 +33,7 @@ export function HeroEventCard({ event }: Props) {
         </p>
 
         <Link
-          href={`/event/${event.event_id}/prepare`}
+  href={`/hanh-le/${event.event_id}`}
           className="mt-5 inline-flex w-full flex-col items-center rounded-xl bg-[var(--gold)] px-6 py-3.5 font-serif text-base font-semibold tracking-wider text-[var(--ink)] shadow-[0_3px_0_var(--gold-deep)] active:translate-y-[1px] active:shadow-[0_2px_0_var(--gold-deep)]"
         >
           <span>BẮT ĐẦU CHUẨN BỊ LỄ</span>

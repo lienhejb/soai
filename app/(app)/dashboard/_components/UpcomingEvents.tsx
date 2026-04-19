@@ -49,7 +49,7 @@ function EventRow({ event }: { event: UpcomingEvent }) {
 
       {/* CTA */}
       <Link
-        href={`/event/${event.event_id}/so`}
+  href={`/hanh-le/${event.event_id}`}
         className="flex-shrink-0 rounded-lg border border-[var(--gold)] px-3 py-1.5 text-xs font-medium text-[var(--gold-deep)] active:bg-[var(--gold)]/10"
       >
         Xem sớ
