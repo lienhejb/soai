@@ -1,31 +1,64 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MOCK_SO_DATA } from './_components/mockData';
 import { useFlatLines, findActiveLineIndex } from './_components/useKaraokeSync';
 import { useMockAudioPlayer } from './_components/useAudioPlayer';
 import { KaraokeView } from './_components/KaraokeView';
 import { AudioControls } from './_components/AudioControls';
+import { ModeSwitcher, type ViewMode } from './_components/ModeSwitcher';
+import { AvatarMode } from './_components/AvatarMode';
+import PriestAvatar from './_components/PriestAvatar';
+
+// Mock thầy — sẽ lấy từ Supabase
+const MOCK_PRIEST = {
+  name: 'Thầy Thích Thiện',
+  role: 'Giọng Nam trầm — Miền Bắc',
+  imageUrl: null as string | null,
+};
+
+// Auto alternate: đổi mode mỗi 25 giây
+const AUTO_INTERVAL_MS = 25000;
 
 export default function HanhLePage() {
   const router = useRouter();
   const data = MOCK_SO_DATA;
   const flatLines = useFlatLines(data);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [mode, setMode] = useState<ViewMode>('karaoke');
+  const [autoAlternate, setAutoAlternate] = useState(false);
 
   const { isPlaying, currentMs, seek, toggle } = useMockAudioPlayer({
     totalDurationMs: data.total_duration_ms,
   });
 
   const activeIndex = findActiveLineIndex(flatLines, currentMs);
+  const currentLine = flatLines[activeIndex] ?? null;
+
+  // Auto alternate: đổi mode khi đang playing
+  const lastSwitchRef = useRef<number>(0);
+  useEffect(() => {
+    if (!autoAlternate || !isPlaying) return;
+    const id = setInterval(() => {
+      const now = performance.now();
+      if (now - lastSwitchRef.current >= AUTO_INTERVAL_MS) {
+        setMode((m) => (m === 'karaoke' ? 'avatar' : 'karaoke'));
+        lastSwitchRef.current = now;
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [autoAlternate, isPlaying]);
+
+  // Khi user switch thủ công → reset timer auto
+  function handleModeChange(m: ViewMode) {
+    setMode(m);
+    lastSwitchRef.current = performance.now();
+  }
 
   function handleClose() {
-    if (isPlaying) {
-      setConfirmClose(true);
-    } else {
-      router.back();
-    }
+    if (isPlaying) setConfirmClose(true);
+    else router.back();
   }
 
   return (
@@ -36,8 +69,8 @@ export default function HanhLePage() {
           'radial-gradient(ellipse at top, rgba(232,184,75,0.06) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(232,184,75,0.04) 0%, transparent 60%)',
       }}
     >
-      {/* Header */}
-      <header className="relative flex items-center justify-between px-4 py-3.5">
+      {/* Header — avatar mini ở góc phải, bấm switch mode */}
+      <header className="relative flex items-center justify-between px-4 py-3">
         <button
           type="button"
           onClick={handleClose}
@@ -58,17 +91,48 @@ export default function HanhLePage() {
           </div>
         </div>
 
-        <div className="flex h-10 w-10 items-center justify-center">
-          {isPlaying && <LivePulse />}
-        </div>
+        <button
+          type="button"
+          onClick={() => handleModeChange(mode === 'karaoke' ? 'avatar' : 'karaoke')}
+          aria-label={`Chuyển sang ${mode === 'karaoke' ? 'chế độ thầy' : 'chế độ lời sớ'}`}
+          className="flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
+        >
+          <PriestAvatar
+            name={MOCK_PRIEST.name}
+            imageUrl={MOCK_PRIEST.imageUrl}
+            isPlaying={isPlaying}
+            size="sm"
+            showInfo={false}
+          />
+        </button>
       </header>
 
-      {/* Karaoke */}
+      {/* View chính */}
       <div className="min-h-0 flex-1">
-        <KaraokeView lines={flatLines} activeIndex={activeIndex} />
+        {mode === 'karaoke' ? (
+          <KaraokeView lines={flatLines} activeIndex={activeIndex} />
+        ) : (
+          <AvatarMode
+            name={MOCK_PRIEST.name}
+            role={MOCK_PRIEST.role}
+            imageUrl={MOCK_PRIEST.imageUrl}
+            isPlaying={isPlaying}
+            currentLine={currentLine}
+            currentMs={currentMs}
+            totalMs={data.total_duration_ms}
+          />
+        )}
       </div>
 
-      {/* Controls */}
+      {/* Mode switcher */}
+      <ModeSwitcher
+        mode={mode}
+        onChange={handleModeChange}
+        autoAlternate={autoAlternate}
+        onToggleAuto={setAutoAlternate}
+      />
+
+      {/* Audio controls */}
       <AudioControls
         isPlaying={isPlaying}
         currentMs={currentMs}
@@ -77,25 +141,12 @@ export default function HanhLePage() {
         onSeek={seek}
       />
 
-      {/* Confirm close modal */}
       {confirmClose && (
         <ConfirmCloseModal
           onCancel={() => setConfirmClose(false)}
           onConfirm={() => router.back()}
         />
       )}
-    </div>
-  );
-}
-
-function LivePulse() {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-60" />
-        <span className="relative h-2 w-2 rounded-full bg-red-500" />
-      </span>
-      <span className="text-[9px] uppercase tracking-wider text-white/50">Live</span>
     </div>
   );
 }
