@@ -6,23 +6,30 @@
 }
 
 :root {
-  /* Giấy dó - nền tâm linh */
+  /* Giấy dó */
   --bg-paper: #faf7f2;
   --bg-paper-2: #f4efe6;
   --ink: #1a1a1a;
   --muted: #6b7280;
 
-  /* Vàng kim SoAI */
+  /* Vàng kim */
   --gold: #d4af37;
   --gold-deep: #9a7a1f;
   --gold-soft: #e8d9a8;
+
+  /* Nâu trầm Hero */
+  --brown-deep: #3a2817;
+  --brown-soft: #5a3f26;
+
+  /* Sớ cuốn (cream) */
+  --paper-scroll: #f5e9c8;
+  --paper-scroll-2: #eadbb0;
 }
 
 body {
   font-family: var(--font-sans);
   background: var(--bg-paper);
   color: var(--ink);
-  /* Texture giấy dó nhẹ */
   background-image:
     radial-gradient(circle at 20% 10%, rgba(212, 175, 55, 0.04) 0%, transparent 40%),
     radial-gradient(circle at 80% 90%, rgba(212, 175, 55, 0.04) 0%, transparent 40%);
@@ -30,6 +37,5 @@ body {
 
 .font-serif { font-family: var(--font-serif); }
 
-/* Hide scrollbar nhưng vẫn scroll được (voice carousel mobile) */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
