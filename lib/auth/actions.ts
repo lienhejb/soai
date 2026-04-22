@@ -43,8 +43,24 @@ export async function verifyOtp(
   });
 
   if (error || !data.user) {
-    return { ok: false, error: error?.message || 'Mã không đúng hoặc đã hết hạn' };
-  }
+  return { ok: false, error: error?.message || 'Mã không đúng hoặc đã hết hạn' };
+}
+
+// ⬇️ THÊM ĐOẠN NÀY — đảm bảo profile tồn tại
+const userId = data.user.id;
+const { error: profileCreateErr } = await supabase
+  .from('profiles')
+  .upsert(
+    { id: userId },
+    { onConflict: 'id', ignoreDuplicates: true }
+  );
+
+if (profileCreateErr) {
+  console.error('[auth] profile upsert failed:', profileCreateErr);
+  return { ok: false, error: 'Lỗi khởi tạo hồ sơ' };
+}
+
+// ⬆️ HẾT đoạn thêm — phần migrate draft giữ nguyên bên dưới
 
   // Migrate draft nếu có
   if (draft) {
