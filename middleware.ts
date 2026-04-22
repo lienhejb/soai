@@ -6,7 +6,7 @@ import { routing } from './i18n/routing';
 const intlMiddleware = createIntlMiddleware(routing);
 
 const PROTECTED_PATHS = ['/dashboard', '/calendar', '/so', '/voice', '/profile'];
-const ONBOARDING_PATHS = ['/gia-dao'];
+const ONBOARDING_PATHS: string[] = []; // Bỏ trống — /gia-dao giờ public cho guest
 const AUTH_PATHS = ['/auth/login', '/auth/verify', '/auth/callback'];
 
 function stripLocale(pathname: string): { locale: string; path: string } {
