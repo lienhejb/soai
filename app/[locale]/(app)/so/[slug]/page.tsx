@@ -37,7 +37,7 @@ export default async function SoDetailPage({ params }: PageProps) {
   });
 
   return (
-    <div className="px-5 pt-6 pb-32">
+    <div className="px-5 pt-6 pb-24">
       <Link href="/dashboard" className="mb-6 inline-block text-sm text-stone-500 hover:text-stone-800">
         ← Trang chủ
       </Link>
@@ -55,11 +55,9 @@ export default async function SoDetailPage({ params }: PageProps) {
       </div>
 
       {/* Nút nghe thử — chưa active */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 px-5 py-4 backdrop-blur">
-        <div className="mx-auto max-w-2xl">
-          <PlayButton slug={slug} />
-        </div>
-      </div>
+      <div className="mt-6">
+  <PlayButton slug={slug} />
+</div>
     </div>
   );
 }
