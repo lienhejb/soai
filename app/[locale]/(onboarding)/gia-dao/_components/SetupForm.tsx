@@ -1,5 +1,6 @@
 'use client';
 
+import { AuthModal } from '@/app/[locale]/_components/AuthModal';
 import { useEffect, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { VoiceSelector } from './VoiceSelector';
@@ -14,6 +15,7 @@ interface Props {
 export function SetupForm({ voices }: Props) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(voices[0]?.voice_id ?? '');
   const [ownerName, setOwnerName] = useState('');
@@ -62,12 +64,8 @@ export function SetupForm({ voices }: Props) {
   const canSubmit = ownerName.trim() && address.trim() && selectedVoiceId;
 
   function handleSubmit() {
-    // TODO(2A.3): Show auth modal → OTP → migrate draft → redirect
-    console.log('[submit] draft ready, cần login để lưu', {
-      selectedVoiceId, ownerName, address, ancestors,
-    });
-    alert('Bước tiếp theo: Đăng ký tài khoản để lưu Gia đạo (chưa làm)');
-  }
+  setAuthOpen(true);
+}
 
   // Tránh render khi chưa hydrate (tránh flash sai data)
   if (!hydrated) return null;
@@ -123,6 +121,7 @@ export function SetupForm({ voices }: Props) {
           </button>
         </div>
       </div>
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </>
   );
 }
