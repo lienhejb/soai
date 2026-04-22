@@ -1,9 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { useState } from 'react';
 import { VoiceSelector } from './VoiceSelector';
 import { AncestorList } from './AncestorList';
+import { loadDraft, saveDraft } from '@/lib/draft';
 import type { Voice, Ancestor } from './types';
 
 interface Props {
@@ -11,20 +12,65 @@ interface Props {
 }
 
 export function SetupForm({ voices }: Props) {
+  const router = useRouter();
+  const [hydrated, setHydrated] = useState(false);
+
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(voices[0]?.voice_id ?? '');
   const [ownerName, setOwnerName] = useState('');
   const [address, setAddress] = useState('');
   const [ancestors, setAncestors] = useState<Ancestor[]>([]);
 
+  // Hydrate từ localStorage khi mount
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      if (draft.voice_id) setSelectedVoiceId(draft.voice_id);
+      setOwnerName(draft.owner_name || '');
+      setAddress(draft.address || '');
+      setAncestors(
+        (draft.ancestors || []).map((a) => ({
+          id: a.temp_id,
+          full_name: a.full_name,
+          role: a.relationship,
+          death_date: a.death_date,
+          is_lunar: a.is_lunar,
+          is_leap_month: a.is_leap_month,
+        })) as Ancestor[]
+      );
+    }
+    setHydrated(true);
+  }, []);
+
+  // Auto-save mỗi khi data đổi (sau khi đã hydrate)
+  useEffect(() => {
+    if (!hydrated) return;
+    saveDraft({
+      owner_name: ownerName,
+      address: address,
+      voice_id: selectedVoiceId,
+      ancestors: ancestors.map((a) => ({
+        temp_id: a.id,
+        full_name: a.full_name,
+        relationship: a.role,
+        death_date: a.death_date,
+        is_lunar: a.is_lunar,
+        is_leap_month: a.is_leap_month,
+      })),
+    });
+  }, [hydrated, ownerName, address, selectedVoiceId, ancestors]);
+
   const canSubmit = ownerName.trim() && address.trim() && selectedVoiceId;
 
-  const router = useRouter();
-
   function handleSubmit() {
-  // TODO: Server Action lưu Supabase
-  console.log({ selectedVoiceId, ownerName, address, ancestors });
-  router.push('/dashboard');
-}
+    // TODO(2A.3): Show auth modal → OTP → migrate draft → redirect
+    console.log('[submit] draft ready, cần login để lưu', {
+      selectedVoiceId, ownerName, address, ancestors,
+    });
+    alert('Bước tiếp theo: Đăng ký tài khoản để lưu Gia đạo (chưa làm)');
+  }
+
+  // Tránh render khi chưa hydrate (tránh flash sai data)
+  if (!hydrated) return null;
 
   return (
     <>
@@ -105,6 +151,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-sm border border-[var(--gold-soft)] bg-[var(--bg-paper-2)] px-4 py-3 text-[var(--ink)] placeholder:text-[var(--muted)]/70 focus:border-[var(--gold)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
+        autoComplete="off"
       />
     </label>
   );
