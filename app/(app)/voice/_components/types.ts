@@ -1,4 +1,4 @@
-import type { Ancestor } from '@app\(onboarding)\gia-dao\_components\types';
+import type { Ancestor } from '@/app/(onboarding)/gia-dao/_components/types';
 
 export type RecordingStep = 'owner' | 'idle' | 'recording' | 'review';
 
