@@ -1,0 +1,20 @@
+{
+  "common": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "back": "Quay lại",
+    "next": "Tiếp",
+    "loading": "Đang tải...",
+    "error": "Đã có lỗi xảy ra"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "calendar": "Lịch",
+    "so": "Sớ",
+    "profile": "Cá nhân"
+  },
+  "app": {
+    "name": "SoAI",
+    "tagline": "Trợ lý tâm linh cá nhân"
+  }
+}

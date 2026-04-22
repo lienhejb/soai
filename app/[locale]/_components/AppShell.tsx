@@ -1,9 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Link, usePathname } from '@/i18n/navigation';
 
 export function AppHeader({ hasNotification = true }: { hasNotification?: boolean }) {
+  const t = useTranslations('nav');
+
+  // TODO(auth): lấy initials từ profile.display_name sau khi có Auth
+  const avatarInitials = 'NV';
+
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--gold-soft)] bg-[var(--bg-paper)]/95 backdrop-blur">
       <div className="flex items-center justify-between px-4 py-3">
@@ -17,7 +22,7 @@ export function AppHeader({ hasNotification = true }: { hasNotification?: boolea
         <div className="flex items-center gap-3">
           <button
             type="button"
-            aria-label="Thông báo"
+            aria-label={t('notifications')}
             className="relative flex h-10 w-10 items-center justify-center rounded-full active:bg-[var(--gold)]/10"
           >
             <BellIcon />
@@ -29,10 +34,10 @@ export function AppHeader({ hasNotification = true }: { hasNotification?: boolea
           <Link
             href="/profile"
             className="h-10 w-10 overflow-hidden rounded-full border border-[var(--gold-soft)] bg-[var(--bg-paper-2)]"
-            aria-label="Cá nhân"
+            aria-label={t('profile')}
           >
             <div className="flex h-full w-full items-center justify-center text-xs font-medium text-[var(--gold-deep)]">
-              NV
+              {avatarInitials}
             </div>
           </Link>
         </div>
@@ -42,13 +47,14 @@ export function AppHeader({ hasNotification = true }: { hasNotification?: boolea
 }
 
 export function BottomNav() {
+  const t = useTranslations('nav');
   const pathname = usePathname();
 
   const items = [
-    { href: '/dashboard', label: 'Trang chủ', icon: HomeIcon },
-    { href: '/calendar', label: 'Lịch', icon: CalendarIcon },
-    { href: '/so', label: 'Sớ', icon: ScrollIcon },
-    { href: '/profile', label: 'Cá nhân', icon: UserIcon },
+    { href: '/dashboard' as const, labelKey: 'home', icon: HomeIcon },
+    { href: '/calendar' as const, labelKey: 'calendar', icon: CalendarIcon },
+    { href: '/so' as const, labelKey: 'so', icon: ScrollIcon },
+    { href: '/profile' as const, labelKey: 'profile', icon: UserIcon },
   ];
 
   return (
@@ -57,7 +63,7 @@ export function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="mx-auto flex max-w-md">
-        {items.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || pathname?.startsWith(href + '/');
           return (
             <li key={href} className="flex-1">
@@ -70,7 +76,7 @@ export function BottomNav() {
                 }`}
               >
                 <Icon active={!!active} />
-                <span>{label}</span>
+                <span>{t(labelKey)}</span>
               </Link>
             </li>
           );
@@ -80,7 +86,7 @@ export function BottomNav() {
   );
 }
 
-// ===== Icons =====
+// ===== Icons (giữ nguyên) =====
 
 function LotusMark() {
   return (
