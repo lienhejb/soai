@@ -5,19 +5,20 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-// Routes cần đăng nhập
 const PROTECTED_PATHS = ['/dashboard', '/calendar', '/so', '/voice', '/profile'];
-// Routes onboarding (đã login nhưng chưa hoàn tất)
 const ONBOARDING_PATHS = ['/gia-dao'];
-// Routes auth (chưa login)
-const AUTH_PATHS = ['/auth/login', '/auth/verify'];
+const AUTH_PATHS = ['/auth/login', '/auth/verify', '/auth/callback'];
 
-function stripLocale(pathname: string): string {
+function stripLocale(pathname: string): { locale: string; path: string } {
   const segments = pathname.split('/').filter(Boolean);
-  if (segments.length > 0 && routing.locales.includes(segments[0] as (typeof routing.locales)[number])) {
-    return '/' + segments.slice(1).join('/');
+  const maybeLocale = segments[0];
+  if (routing.locales.includes(maybeLocale as (typeof routing.locales)[number])) {
+    return {
+      locale: maybeLocale,
+      path: '/' + segments.slice(1).join('/'),
+    };
   }
-  return pathname;
+  return { locale: routing.defaultLocale, path: pathname };
 }
 
 function matchPath(pathname: string, patterns: string[]): boolean {
@@ -25,10 +26,19 @@ function matchPath(pathname: string, patterns: string[]): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  // 1. Chạy i18n middleware trước — xử lý locale redirect
   const response = intlMiddleware(request);
 
-  // 2. Setup Supabase client với cookies
+  const { locale, path } = stripLocale(request.nextUrl.pathname);
+
+  const isProtected = matchPath(path, PROTECTED_PATHS);
+  const isOnboarding = matchPath(path, ONBOARDING_PATHS);
+  const isAuth = matchPath(path, AUTH_PATHS);
+
+  // Public routes (landing, try, api...) → không check auth
+  if (!isProtected && !isOnboarding && !isAuth) {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -47,16 +57,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // 3. Lấy session
   const { data: { user } } = await supabase.auth.getUser();
-
-  // 4. Logic redirect
-  const locale = request.nextUrl.pathname.split('/')[1] || routing.defaultLocale;
-  const pathWithoutLocale = stripLocale(request.nextUrl.pathname);
-
-  const isProtected = matchPath(pathWithoutLocale, PROTECTED_PATHS);
-  const isOnboarding = matchPath(pathWithoutLocale, ONBOARDING_PATHS);
-  const isAuth = matchPath(pathWithoutLocale, AUTH_PATHS);
 
   // Chưa login + vào protected/onboarding → redirect login
   if (!user && (isProtected || isOnboarding)) {
@@ -65,14 +66,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Đã login + vào trang auth → redirect về dashboard
+  // Đã login + vào auth → redirect dashboard
   if (user && isAuth) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/dashboard`;
     return NextResponse.redirect(url);
   }
 
-  // Đã login + vào protected → kiểm tra onboarded
+  // Đã login + vào protected → check onboarded
   if (user && isProtected) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -87,7 +88,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Đã login + đã onboarded + vào onboarding → về dashboard
+  // Đã login + đã onboarded + vào onboarding → dashboard
   if (user && isOnboarding) {
     const { data: profile } = await supabase
       .from('profiles')
