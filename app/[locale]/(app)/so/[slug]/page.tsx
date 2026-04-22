@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
+import { PlayButton } from './_components/PlayButton';
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -56,12 +57,7 @@ export default async function SoDetailPage({ params }: PageProps) {
       {/* Nút nghe thử — chưa active */}
       <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="mx-auto max-w-2xl">
-          <button
-            disabled
-            className="w-full rounded-xl bg-stone-200 py-4 font-bold tracking-widest text-stone-400 cursor-not-allowed"
-          >
-            NGHE THỬ (SẮP CÓ)
-          </button>
+          <PlayButton slug={slug} />
         </div>
       </div>
     </div>
