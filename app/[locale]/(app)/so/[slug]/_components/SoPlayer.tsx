@@ -1,5 +1,6 @@
 'use client';
 
+import { Link } from '@/i18n/navigation';
 import { useRef, useState } from 'react';
 
 interface Voice {
@@ -204,6 +205,16 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
           <span className="text-sm">Chia sẻ</span>
         </button>
       </div>
+
+      {/* Nút Vào chế độ Hành Lễ */}<Link
+  href={`/hanh-le/${templateSlug}`}
+  className="mt-3 flex items-center justify-center gap-2 rounded-xl border-2 border-amber-500 bg-gradient-to-b from-amber-50 to-white py-4 font-serif font-bold tracking-widest text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 3l9 9-9 9M3 12h18" />
+  </svg>
+  <span>VÀO CHẾ ĐỘ HÀNH LỄ</span>
+</Link>
 
       {/* Toast */}
       {toast && (
