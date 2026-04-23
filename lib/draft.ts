@@ -13,6 +13,7 @@ export interface DraftAncestor {
 export interface DraftData {
   version: number;
   owner_name: string;
+  gender: 'male' | 'female' | null;   // ← THÊM DÒNG NÀY
   address: string;
   voice_id: string;
   ancestors: DraftAncestor[];

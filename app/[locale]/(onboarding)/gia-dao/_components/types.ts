@@ -1,6 +1,7 @@
 // Single Source of Truth — đồng bộ với Supabase schema
 
 export type VoiceGender = 'male' | 'female';
+export type UserGender = 'male' | 'female';
 
 export interface Voice {
   voice_id: string;        // UUID — FK bất biến

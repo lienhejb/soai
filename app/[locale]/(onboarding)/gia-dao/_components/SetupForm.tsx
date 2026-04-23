@@ -19,6 +19,7 @@ export function SetupForm({ voices }: Props) {
 
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(voices[0]?.voice_id ?? '');
   const [ownerName, setOwnerName] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | null>(null);
   const [address, setAddress] = useState('');
   const [ancestors, setAncestors] = useState<Ancestor[]>([]);
 
@@ -28,7 +29,8 @@ export function SetupForm({ voices }: Props) {
     if (draft) {
       if (draft.voice_id) setSelectedVoiceId(draft.voice_id);
       setOwnerName(draft.owner_name || '');
-      setAddress(draft.address || '');
+    setGender(draft.gender ?? null);          // ← THÊM DÒNG NÀY
+    setAddress(draft.address || '');
       setAncestors(
         (draft.ancestors || []).map((a) => ({
           id: a.temp_id,
@@ -48,6 +50,7 @@ export function SetupForm({ voices }: Props) {
     if (!hydrated) return;
     saveDraft({
       owner_name: ownerName,
+      gender: gender,
       address: address,
       voice_id: selectedVoiceId,
       ancestors: ancestors.map((a) => ({
@@ -59,7 +62,7 @@ export function SetupForm({ voices }: Props) {
         is_leap_month: a.is_leap_month,
       })),
     });
-  }, [hydrated, ownerName, address, selectedVoiceId, ancestors]);
+  }, [hydrated, ownerName, gender, address, selectedVoiceId, ancestors]);
 
   const canSubmit = ownerName.trim() && address.trim() && selectedVoiceId;
 
