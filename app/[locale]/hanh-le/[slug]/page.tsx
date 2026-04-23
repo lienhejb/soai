@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { MOCK_SO_DATA } from './_components/mockData';
 import { useFlatLines, findActiveLineIndex } from './_components/useKaraokeSync';
@@ -21,9 +21,10 @@ const MOCK_PRIEST = {
 // Auto alternate: đổi mode mỗi 25 giây
 const AUTO_INTERVAL_MS = 25000;
 
-export default function HanhLePage() {
+export default function HanhLePage({ params }: { params: Promise<{ slug: string }> }) {
   const router = useRouter();
   const data = MOCK_SO_DATA;
+  // TODO: dùng slug để fetch từ DB sau, tạm giữ MOCK_SO_DATA
   const flatLines = useFlatLines(data);
   const [confirmClose, setConfirmClose] = useState(false);
   const [mode, setMode] = useState<ViewMode>('karaoke');
