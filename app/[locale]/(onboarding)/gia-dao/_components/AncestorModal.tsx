@@ -86,9 +86,11 @@ export function AncestorModal({ onClose, onSave }: Props) {
           <label className="block">
             <span className="mb-1.5 block text-sm text-[var(--ink)]">Ngày giỗ</span>
             <input
-              type="date"
-              value={deathDate}
-              onChange={(e) => setDeathDate(e.target.value)}
+  type="date"
+  value={deathDate}
+  onChange={(e) => setDeathDate(e.target.value)}
+  min="1940-01-01"
+  max="2026-12-31"
               className="w-full rounded-sm border border-[var(--gold-soft)] bg-[var(--bg-paper-2)] px-4 py-2.5 text-[var(--ink)] focus:border-[var(--gold)] focus:outline-none"
             />
           </label>
