@@ -35,10 +35,10 @@ export default async function SoDetailPage({ params }: PageProps) {
 
   // MOCK — sau này fetch từ DB user_voices/system_voices
   const availableVoices = [
-    { id: 'sys-thay-thien', label: 'Thầy Thích Thiện', gender: 'male' as const, type: 'system' },
-    { id: 'sys-bao-phuc', label: 'Thầy Bảo Phúc', gender: 'male' as const, type: 'system' },
-    { id: 'sys-dieu-tam', label: 'Cô Diệu Tâm', gender: 'female' as const, type: 'system' },
-  ];
+  { id: 'sys-thay-thien', label: 'Thầy Thích Thiện', gender: 'male', type: 'system' },
+  { id: 'sys-bao-phuc', label: 'Thầy Bảo Phúc', gender: 'male', type: 'system' },
+  { id: 'sys-dieu-tam', label: 'Cô Diệu Tâm', gender: 'female', type: 'system' },
+] as const;
 
   // MOCK default — sau này lấy từ profile.default_voice_id
   const defaultVoiceId = profile?.gender === 'female' ? 'sys-dieu-tam' : 'sys-thay-thien';
