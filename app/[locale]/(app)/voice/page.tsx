@@ -1,26 +1,55 @@
-import { VoiceRecorder } from './_components/VoiceRecorder';
-import type { Ancestor, RecordingScript } from './_components/types';
+import { createClient } from '@/lib/supabase/server';
+import { VoiceRecorderSimple } from './_components/VoiceRecorderSimple';
 
-// MOCK — thay bằng Supabase query
-const MOCK_ANCESTORS: Ancestor[] = [
-  { id: 'anc-1', full_name: 'Nguyễn Văn B', role: 'Cha', death_date: '1990-05-20', is_lunar: true, is_leap_month: false },
-  { id: 'anc-2', full_name: 'Trần Thị C', role: 'Mẹ', death_date: '2005-11-03', is_lunar: true, is_leap_month: false },
-];
+export default async function VoicePage() {
+  const supabase = await createClient();
 
-const MOCK_SCRIPT: RecordingScript = {
-  id: 'script-01',
-  title: 'Đoạn khấn ngắn',
-  content:
-    'Nam mô Bổn Sư Thích Ca Mâu Ni Phật. Con xin kính cẩn nghiêng mình trước anh linh tổ tiên, nguyện giữ gìn gia đạo bình an.',
-  min_duration_sec: 15,
-};
+  // Fetch script mẫu (script đã seed với 3 segments)
+  const { data: script } = await supabase
+    .from('recording_scripts')
+    .select('id, title, content, min_duration_sec')
+    .eq('is_active', true)
+    .eq('locale', 'vi')
+    .order('sort_order')
+    .limit(1)
+    .single();
 
-export default function VoicePage() {
+  // Fetch 1 text khác để TTS test (template Rằm)
+  const { data: testTemplate } = await supabase
+    .from('templates')
+    .select('content')
+    .eq('slug', 'khan-ram-hang-thang')
+    .eq('locale', 'vi')
+    .single();
+
+  if (!script || !testTemplate) {
+    return (
+      <div className="p-8 text-center text-stone-500">
+        Chưa có script hoặc template để test.
+      </div>
+    );
+  }
+
+  // Render text test (thay biến tạm)
+  const testText = testTemplate.content
+    .replace(/\{\{\s*owner_name\s*\}\}/g, 'Nguyễn Văn A')
+    .replace(/\{\{\s*address\s*\}\}/g, 'Hà Nội');
+
   return (
-    <div className="min-h-screen bg-[var(--bg-paper)]">
-      <main className="mx-auto max-w-2xl px-5 pb-20 pt-8 md:pt-12">
-        <VoiceRecorder ancestors={MOCK_ANCESTORS} script={MOCK_SCRIPT} />
-      </main>
+    <div className="px-5 pt-6 pb-24">
+      <h1 className="mb-2 font-serif text-3xl font-bold text-stone-800">
+        Lưu Giữ Giọng Nói
+      </h1>
+      <div className="mb-6 h-[1px] w-16 bg-amber-500/50" />
+      <p className="mb-8 text-sm text-stone-500">
+        Đọc đoạn dưới đây để AI học giọng của bạn.
+      </p>
+
+      <VoiceRecorderSimple
+        scriptContent={script.content}
+        minDurationSec={script.min_duration_sec}
+        testText={testText}
+      />
     </div>
   );
 }
