@@ -53,7 +53,7 @@ function EventRow({ event }: { event: UpcomingEvent }) {
       </div>
 
       <Link
-        href={`/so/${event.event_id}`}
+  href={`/so/${event.target_slug || ''}`}
         className="flex-shrink-0 rounded-lg border border-amber-500 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-50"
       >
         Xem sớ
