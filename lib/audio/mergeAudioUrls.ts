@@ -68,7 +68,7 @@ function encodeMp3(buffer: AudioBuffer): Blob {
   const tail = encoder.flush();
   if (tail.length > 0) chunks.push(tail);
 
-  return new Blob(chunks, { type: 'audio/mpeg' });
+  return new Blob(chunks as BlobPart[], { type: 'audio/mpeg' });
 }
 
 function floatToInt16(floatArr: Float32Array): Int16Array {
