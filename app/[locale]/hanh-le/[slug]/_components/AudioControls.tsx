@@ -2,12 +2,18 @@
 
 import { useState } from 'react';
 
+import type { BackgroundSound } from '@/lib/hanh-le/background-sounds';
+import type { AudioVolumes } from './useBackgroundSounds';
+
 interface Props {
   isPlaying: boolean;
   currentMs: number;
   totalMs: number;
   onToggle: () => void;
   onSeek: (ms: number) => void;
+  volumes: AudioVolumes;
+  onVolumeChange: (key: string, value: number) => void;
+  backgroundSounds: readonly BackgroundSound[];
 }
 
 export function AudioControls({
@@ -16,10 +22,10 @@ export function AudioControls({
   totalMs,
   onToggle,
   onSeek,
+  volumes,
+  onVolumeChange,
+  backgroundSounds,
 }: Props) {
-  const [voiceVol, setVoiceVol] = useState(100);
-  const [moVol, setMoVol] = useState(40);
-  const [chuongVol, setChuongVol] = useState(30);
   const [showSettings, setShowSettings] = useState(false);
 
   const progress = totalMs > 0 ? (currentMs / totalMs) * 100 : 0;
@@ -88,9 +94,21 @@ export function AudioControls({
       {/* Volume panel */}
       {showSettings && (
         <div className="border-t border-white/[0.06] px-5 py-4">
-          <VolumeSlider label="Giọng đọc" icon={<VoiceIcon />} value={voiceVol} onChange={setVoiceVol} />
-          <VolumeSlider label="Tiếng mõ" icon={<MoIcon />} value={moVol} onChange={setMoVol} />
-          <VolumeSlider label="Tiếng chuông" icon={<BellPhapKhiIcon />} value={chuongVol} onChange={setChuongVol} />
+          <VolumeSlider
+            label="Giọng đọc"
+            icon={<VoiceIcon />}
+            value={volumes.vocal}
+            onChange={(v) => onVolumeChange('vocal', v)}
+          />
+          {backgroundSounds.map((sound) => (
+            <VolumeSlider
+              key={sound.key}
+              label={sound.label}
+              icon={iconFor(sound.icon)}
+              value={volumes[sound.key] ?? sound.default_volume}
+              onChange={(v) => onVolumeChange(sound.key, v)}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -125,6 +143,13 @@ function fmtTime(ms: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${r.toString().padStart(2, '0')}`;
+}
+
+function iconFor(name: 'mo' | 'chuong'): React.ReactNode {
+  switch (name) {
+    case 'mo': return <MoIcon />;
+    case 'chuong': return <BellPhapKhiIcon />;
+  }
 }
 
 // ===== Icons =====

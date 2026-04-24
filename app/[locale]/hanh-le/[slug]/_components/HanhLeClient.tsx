@@ -1,5 +1,6 @@
 'use client';
 
+import { useBackgroundSounds } from './useBackgroundSounds';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { KaraokeView } from './KaraokeView';
@@ -41,6 +42,10 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
   const [currentMs, setCurrentMs] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+  const { volumes, setVolume, backgroundSounds } = useBackgroundSounds({
+    vocalAudioRef: audioRef,
+    isPlaying,
+  });
   const rafRef = useRef<number | null>(null);
 
   // Convert lines → FlatLine[]
@@ -199,6 +204,9 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
         totalMs={data.durationMs}
         onToggle={toggle}
         onSeek={seek}
+        volumes={volumes}
+        onVolumeChange={setVolume}
+        backgroundSounds={backgroundSounds}
       />
 
       {confirmClose && (
