@@ -8,6 +8,7 @@ import { mergeAudioUrlsToMp3 } from '@/lib/audio/mergeAudioUrls';
 
 interface Voice {
   id: string;
+  voice_key: string;   // ← THÊM
   label: string;
   gender: 'male' | 'female';
   type: 'system' | 'clone';
@@ -37,22 +38,6 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const currentVoice = voices.find((v) => v.id === voiceId)!;
-
-  // Map voice_id ElevenLabs → voice_key hệ thống
-  function voiceKeyFromId(id: string): string {
-    const slug = voices.find((v) => v.id === id)?.label
-      ?.toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[àáảãạăắằẳẵặâấầẩẫậ]/g, 'a')
-      .replace(/[èéẻẽẹêếềểễệ]/g, 'e')
-      .replace(/[ìíỉĩị]/g, 'i')
-      .replace(/[òóỏõọôốồổỗộơớờởỡợ]/g, 'o')
-      .replace(/[ùúủũụưứừửữự]/g, 'u')
-      .replace(/[ỳýỷỹỵ]/g, 'y')
-      .replace(/[đ]/g, 'd')
-      .replace(/[^a-z0-9-]/g, '');
-    return `system:${slug ?? 'unknown'}`;
-  }
 
   async function handlePlay() {
     if (playing) {
@@ -119,7 +104,12 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
     setRenderError(null);
 
     try {
-      const voiceKey = voiceKeyFromId(voiceId);
+      const voiceKey = voices.find((v) => v.id === voiceId)?.voice_key;
+if (!voiceKey) {
+  setRenderError('Voice không hợp lệ');
+  setRenderStatus('error');
+  return;
+}
 
       // 1. Prepare — check cache hoặc lấy segments
       const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId);

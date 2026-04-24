@@ -43,9 +43,10 @@ const { data: systemVoices } = await supabase
   .order('sort_order');
 
 const availableVoices = (systemVoices ?? [])
-  .filter((v) => v.provider_voice_id) // chỉ voice đã có ID
+  .filter((v) => v.provider_voice_id)
   .map((v) => ({
     id: v.provider_voice_id as string,
+    voice_key: v.voice_key,    // ← THÊM
     label: v.display_name,
     gender: v.gender as 'male' | 'female',
     type: 'system' as const,
