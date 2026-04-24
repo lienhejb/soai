@@ -3,6 +3,8 @@ import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
 
+export const dynamic = 'force-dynamic';   // ← THÊM DÒNG NÀY
+
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
 }
@@ -33,15 +35,27 @@ export default async function SoDetailPage({ params }: PageProps) {
     address: profile?.address || '[Địa chỉ]',
   });
 
-  // MOCK — sau này fetch từ DB user_voices/system_voices
-  const availableVoices = [
-  { id: 'KVzG2JMdZJKi6y7cwERP', label: 'Thầy Thích Thiện', gender: 'male', type: 'system' },
-  { id: '6adFm46eyy74snVn6YrT', label: 'Thầy Bảo Phúc', gender: 'male', type: 'system' },
-  { id: 'jdlxsPOZOHdGEfcItXVu', label: 'Cô Diệu Tâm', gender: 'female', type: 'system' },
-] as const;
+  // Fetch voices từ DB
+const { data: systemVoices } = await supabase
+  .from('system_voices')
+  .select('voice_key, display_name, description, gender, provider_voice_id')
+  .eq('is_active', true)
+  .order('sort_order');
 
-  // MOCK default — sau này lấy từ profile.default_voice_id
-  const defaultVoiceId = profile?.gender === 'female' ? 'jdlxsPOZOHdGEfcItXVu' : 'KVzG2JMdZJKi6y7cwERP';
+const availableVoices = (systemVoices ?? [])
+  .filter((v) => v.provider_voice_id) // chỉ voice đã có ID
+  .map((v) => ({
+    id: v.provider_voice_id as string,
+    label: v.display_name,
+    gender: v.gender as 'male' | 'female',
+    type: 'system' as const,
+  }));
+
+const defaultVoice = availableVoices.find((v) => 
+  v.gender === (profile?.gender === 'female' ? 'female' : 'male')
+) ?? availableVoices[0];
+
+const defaultVoiceId = defaultVoice?.id ?? '';
 
   return (
     <div className="px-5 pt-6 pb-24">

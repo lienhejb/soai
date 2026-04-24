@@ -16,7 +16,7 @@ interface Voice {
 interface Props {
   templateSlug: string;
   templateTitle: string;
-  voices: readonly Voice[];
+  voices: Voice[];
   defaultVoiceId: string;
 }
 
