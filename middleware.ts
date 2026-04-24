@@ -57,7 +57,8 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  await supabase.auth.getSession();  // ← thêm dòng này TRƯỚC
+const { data: { user } } = await supabase.auth.getUser();
 
   // Chưa login + vào protected/onboarding → redirect login
   if (!user && (isProtected || isOnboarding)) {

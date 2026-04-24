@@ -167,6 +167,10 @@ function EmailStep({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={(e) => {
+    const v = e.target.value.trim();
+    if (v && !v.includes('@')) setEmail(v + '@gmail.com');
+  }}
             placeholder="Ví dụ: alex@gmail.com"
             required
             autoFocus
