@@ -7,7 +7,6 @@ const intlMiddleware = createIntlMiddleware(routing);
 
 const PROTECTED_PATHS = ['/dashboard', '/calendar', '/so', '/voice', '/profile'];
 const ONBOARDING_PATHS: string[] = []; // Bỏ trống — /gia-dao giờ public cho guest
-const AUTH_PATHS = ['/auth/login', '/auth/verify', '/auth/callback'];
 
 function stripLocale(pathname: string): { locale: string; path: string } {
   const segments = pathname.split('/').filter(Boolean);
@@ -32,12 +31,11 @@ export async function middleware(request: NextRequest) {
 
   const isProtected = matchPath(path, PROTECTED_PATHS);
   const isOnboarding = matchPath(path, ONBOARDING_PATHS);
-  const isAuth = matchPath(path, AUTH_PATHS);
 
   // Public routes (landing, try, api...) → không check auth
-  if (!isProtected && !isOnboarding && !isAuth) {
-    return response;
-  }
+  if (!isProtected && !isOnboarding) {
+  return response;
+}
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,13 +62,6 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getSession();  // ← thêm dòng này TRƯỚC
 const { data: { user } } = await supabase.auth.getUser();
-
-  // Chưa login + vào protected/onboarding → redirect login
-  if (!user && (isProtected || isOnboarding)) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/auth/login`;
-    return NextResponse.redirect(url);
-  }
 
   // Đã login + vào auth → redirect dashboard
   if (user && isAuth) {
