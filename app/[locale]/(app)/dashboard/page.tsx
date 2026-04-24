@@ -48,6 +48,26 @@ export default async function DashboardPage() {
 
   const today = getTodayInfo();
   const events = computeUpcomingEvents(people, 30);
+  // Fetch templates cho event type của hero
+let availableTemplates: Array<{ id: string; slug: string; title: string }> = [];
+if (heroEvent) {
+  const purposeMap: Record<string, string> = {
+    RAM: 'ram',
+    MONG: 'mung_mot',
+    GIO: 'gio',
+    KHAC: '',
+  };
+  const purpose = purposeMap[heroEvent.event_type];
+  if (purpose) {
+    const { data } = await supabase
+      .from('templates')
+      .select('id, slug, title')
+      .eq('locale', 'vi')
+      .eq('purpose', purpose)
+      .eq('is_active', true);
+    availableTemplates = data ?? [];
+  }
+}
   const heroEvent = events.find((e) => e.is_hero);
   const otherEvents = events.filter((e) => !e.is_hero);
 
@@ -64,6 +84,7 @@ export default async function DashboardPage() {
       todayLunar={today.lunar}
       heroEvent={heroEvent ?? null}
       otherEvents={otherEvents}
+      availableTemplates={availableTemplates}
       userSos={MOCK_USER_SOS}
       initialProfile={{
         display_name: profile?.display_name || '',

@@ -1,19 +1,26 @@
 'use client';
 
+import { useState } from 'react';
 import { Link } from '@/i18n/navigation';
+import { TemplatePickerSheet, type TemplateOption } from './TemplatePickerSheet';
 import type { ComputedEvent as UpcomingEvent } from '@/lib/lunar';
 
 interface Props {
   event: UpcomingEvent;
   suggestedTemplateSlug?: string;   // slug văn khấn AI gợi ý
   suggestedTemplateTitle?: string;
+  availableTemplates?: TemplateOption[];
 }
 
 export function HeroEventCard({
   event,
   suggestedTemplateSlug,
   suggestedTemplateTitle,
+  availableTemplates = [],
 }: Props) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [currentSlug, setCurrentSlug] = useState(suggestedTemplateSlug);
+  const [currentTitle, setCurrentTitle] = useState(suggestedTemplateTitle);
   const subtitle = event.days_left === 0
     ? 'Hôm nay'
     : event.days_left === 1
@@ -39,23 +46,37 @@ export function HeroEventCard({
       </div>
 
       {/* AI Gợi ý */}
-      {suggestedTemplateSlug && suggestedTemplateTitle && (
-        <div className="mt-5 rounded-xl border border-amber-100 bg-white/60 p-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-amber-700">
-            <SparkleIcon />
-            <span>Gợi ý văn khấn</span>
-          </div>
-          <div className="mt-1.5 font-serif text-base font-semibold text-stone-800">
-            {suggestedTemplateTitle}
-          </div>
+      {currentSlug && currentTitle && (
+  <div className="mt-5 rounded-xl border border-amber-100 bg-white/60 p-4 backdrop-blur-sm">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-amber-700">
+          <SparkleIcon />
+          <span>Gợi ý văn khấn</span>
         </div>
+        <div className="mt-1.5 truncate font-serif text-base font-semibold text-stone-800">
+          {currentTitle}
+        </div>
+      </div>
+      {availableTemplates.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-label="Đổi văn khấn"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-amber-400 bg-white text-amber-700 transition hover:bg-amber-50"
+        >
+          <SwapIcon />
+        </button>
       )}
+    </div>
+  </div>
+)}
 
       {/* Actions */}
-      <div className="mt-5 space-y-2.5">
-        {suggestedTemplateSlug ? (
+      <div className="mt-5">
+        {currentSlug ? (
           <Link
-            href={`/so/${suggestedTemplateSlug}`}
+            href={`/so/${currentSlug}`}
             className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-6 py-3.5 font-serif text-base font-bold tracking-widest text-white shadow-lg shadow-amber-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40"
           >
             TIẾN HÀNH DÂNG SỚ
@@ -68,14 +89,21 @@ export function HeroEventCard({
             CHỌN VĂN KHẤN
           </Link>
         )}
-
-        <Link
-          href="/so"
-          className="flex w-full items-center justify-center text-sm text-stone-500 hover:text-amber-700"
-        >
-          Chọn văn khấn khác →
-        </Link>
       </div>
+
+      {/* Sheet */}
+      <TemplatePickerSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        options={availableTemplates.map((t) => ({
+          ...t,
+          is_current: t.slug === currentSlug,
+        }))}
+        onSelect={(opt) => {
+          setCurrentSlug(opt.slug);
+          setCurrentTitle(opt.title);
+        }}
+      />
     </div>
   );
 }
@@ -94,6 +122,17 @@ function SparkleIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+    </svg>
+  );
+}
+
+function SwapIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m16 3 4 4-4 4" />
+      <path d="M20 7H4" />
+      <path d="m8 21-4-4 4-4" />
+      <path d="M4 17h16" />
     </svg>
   );
 }
