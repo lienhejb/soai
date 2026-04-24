@@ -1,13 +1,19 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { UpcomingEvent } from './types';
 
 interface Props {
   event: UpcomingEvent;
+  suggestedTemplateSlug?: string;   // slug văn khấn AI gợi ý
+  suggestedTemplateTitle?: string;
 }
 
-export function HeroEventCard({ event }: Props) {
+export function HeroEventCard({
+  event,
+  suggestedTemplateSlug,
+  suggestedTemplateTitle,
+}: Props) {
   const subtitle = event.days_left === 0
     ? 'Hôm nay'
     : event.days_left === 1
@@ -15,31 +21,59 @@ export function HeroEventCard({ event }: Props) {
       : `Còn ${event.days_left} ngày nữa`;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-[var(--brown-deep)] p-6 text-center shadow-lg">
-      {/* Họa tiết mây vân mờ */}
-      <CloudPattern />
-
-      <div className="relative">
+    <div className="mx-5 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50 to-white p-6 shadow-lg shadow-amber-900/5">
+      {/* Box Ngày tháng */}
+      <div className="flex items-start gap-4">
         <MoonIcon />
-
-        <div className="mt-3 font-serif text-xs uppercase tracking-[0.25em] text-[var(--gold-soft)]/70">
-          Sắp đến
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] uppercase tracking-[0.25em] text-amber-700">
+            Sự kiện sắp tới
+          </div>
+          <h2 className="mt-1 font-serif text-xl font-bold leading-tight text-stone-800">
+            {event.title}
+          </h2>
+          <p className="mt-1 text-sm text-stone-500">
+            {event.date_display} · <span className="font-medium text-amber-700">{subtitle}</span>
+          </p>
         </div>
-        <h2 className="mt-1 font-serif text-2xl font-medium uppercase tracking-wide text-[var(--gold)]">
-          {event.title}
-        </h2>
-        <p className="mt-2 text-sm text-[var(--bg-paper-2)]/80">
-          {subtitle} · {event.date_display}
-        </p>
+      </div>
+
+      {/* AI Gợi ý */}
+      {suggestedTemplateSlug && suggestedTemplateTitle && (
+        <div className="mt-5 rounded-xl border border-amber-100 bg-white/60 p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-amber-700">
+            <SparkleIcon />
+            <span>Gợi ý văn khấn</span>
+          </div>
+          <div className="mt-1.5 font-serif text-base font-semibold text-stone-800">
+            {suggestedTemplateTitle}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-5 space-y-2.5">
+        {suggestedTemplateSlug ? (
+          <Link
+            href={`/so/${suggestedTemplateSlug}`}
+            className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-6 py-3.5 font-serif text-base font-bold tracking-widest text-white shadow-lg shadow-amber-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40"
+          >
+            TIẾN HÀNH DÂNG SỚ
+          </Link>
+        ) : (
+          <Link
+            href="/so"
+            className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-6 py-3.5 font-serif text-base font-bold tracking-widest text-white shadow-lg shadow-amber-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40"
+          >
+            CHỌN VĂN KHẤN
+          </Link>
+        )}
 
         <Link
-  href={`/hanh-le/${event.event_id}`}
-          className="mt-5 inline-flex w-full flex-col items-center rounded-xl bg-[var(--gold)] px-6 py-3.5 font-serif text-base font-semibold tracking-wider text-[var(--ink)] shadow-[0_3px_0_var(--gold-deep)] active:translate-y-[1px] active:shadow-[0_2px_0_var(--gold-deep)]"
+          href="/so"
+          className="flex w-full items-center justify-center text-sm text-stone-500 hover:text-amber-700"
         >
-          <span>BẮT ĐẦU CHUẨN BỊ LỄ</span>
-          <span className="mt-0.5 text-[10px] font-normal italic tracking-normal text-[var(--ink)]/70">
-            AI soạn sớ và tư vấn mâm cúng
-          </span>
+          Chọn văn khấn khác →
         </Link>
       </div>
     </div>
@@ -48,48 +82,18 @@ export function HeroEventCard({ event }: Props) {
 
 function MoonIcon() {
   return (
-    <svg
-      width="40"
-      height="40"
-      viewBox="0 0 40 40"
-      className="mx-auto"
-      aria-hidden
-    >
-      <circle cx="20" cy="20" r="14" fill="var(--gold)" opacity="0.95" />
-      <circle cx="16" cy="18" r="2" fill="var(--brown-deep)" opacity="0.2" />
-      <circle cx="24" cy="22" r="1.5" fill="var(--brown-deep)" opacity="0.2" />
-      <circle cx="20" cy="25" r="1" fill="var(--brown-deep)" opacity="0.2" />
-      <circle cx="20" cy="20" r="18" stroke="var(--gold)" strokeWidth="0.3" opacity="0.3" fill="none" />
-    </svg>
+    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-md shadow-amber-500/30">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+      </svg>
+    </div>
   );
 }
 
-function CloudPattern() {
+function SparkleIcon() {
   return (
-    <svg
-      className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.08]"
-      viewBox="0 0 400 300"
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden
-    >
-      <defs>
-        <pattern id="clouds" x="0" y="0" width="120" height="80" patternUnits="userSpaceOnUse">
-          <path
-            d="M10 40 Q 20 25, 35 35 T 60 40 Q 70 30, 85 40 T 110 45"
-            fill="none"
-            stroke="var(--gold)"
-            strokeWidth="1"
-          />
-          <path
-            d="M5 65 Q 18 55, 30 62 T 55 65 Q 68 58, 80 65 T 115 70"
-            fill="none"
-            stroke="var(--gold)"
-            strokeWidth="0.7"
-            opacity="0.6"
-          />
-        </pattern>
-      </defs>
-      <rect width="400" height="300" fill="url(#clouds)" />
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
     </svg>
   );
 }

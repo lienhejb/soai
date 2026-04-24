@@ -162,21 +162,38 @@ function EmailStep({
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="relative">
-          <MailIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onBlur={(e) => {
-    const v = e.target.value.trim();
-    if (v && !v.includes('@')) setEmail(v + '@gmail.com');
-  }}
-            placeholder="Ví dụ: alex@gmail.com"
-            required
-            autoFocus
-            className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-12 pr-4 text-stone-800 placeholder:text-stone-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition"
-          />
-        </div>
+  <MailIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+  <input
+    type="email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    placeholder="Ví dụ: alex@gmail.com"
+    required
+    autoFocus
+    autoComplete="email"
+    className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-12 pr-4 text-stone-800 placeholder:text-stone-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition"
+  />
+
+  {/* Suggestions dropdown */}
+  {email.length > 0 && !email.includes('@') && (
+    <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+      {['gmail.com', 'yahoo.com', 'outlook.com', 'icloud.com'].map((domain) => (
+        <button
+          key={domain}
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setEmail(`${email}@${domain}`);
+          }}
+          className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-700 transition hover:bg-amber-50"
+        >
+          <span className="text-stone-400">{email}</span>
+          <span className="font-medium text-amber-600">@{domain}</span>
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
         {error && (
           <p className="text-sm text-rose-600">{error}</p>
