@@ -1,7 +1,10 @@
 'use client';
 
-import { Link } from '@/i18n/navigation';
 import { useRef, useState } from 'react';
+import { useRouter } from '@/i18n/navigation';
+import { prepareRenderedSo } from '@/lib/voice-clone/prepare-so';
+import { finalizeRenderedSo } from '@/lib/voice-clone/upload-rendered';
+import { mergeAudioUrlsToMp3 } from '@/lib/audio/mergeAudioUrls';
 
 interface Voice {
   id: string;
@@ -17,7 +20,11 @@ interface Props {
   defaultVoiceId: string;
 }
 
+type RenderStatus = 'idle' | 'preparing' | 'merging' | 'uploading' | 'done' | 'error';
+
 export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }: Props) {
+  const router = useRouter();
+
   const [voiceId, setVoiceId] = useState(defaultVoiceId);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,8 +32,27 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  const [renderStatus, setRenderStatus] = useState<RenderStatus>('idle');
+  const [renderError, setRenderError] = useState<string | null>(null);
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const currentVoice = voices.find((v) => v.id === voiceId)!;
+
+  // Map voice_id ElevenLabs → voice_key hệ thống
+  function voiceKeyFromId(id: string): string {
+    const slug = voices.find((v) => v.id === id)?.label
+      ?.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[àáảãạăắằẳẵặâấầẩẫậ]/g, 'a')
+      .replace(/[èéẻẽẹêếềểễệ]/g, 'e')
+      .replace(/[ìíỉĩị]/g, 'i')
+      .replace(/[òóỏõọôốồổỗộơớờởỡợ]/g, 'o')
+      .replace(/[ùúủũụưứừửữự]/g, 'u')
+      .replace(/[ỳýỷỹỵ]/g, 'y')
+      .replace(/[đ]/g, 'd')
+      .replace(/[^a-z0-9-]/g, '');
+    return `system:${slug ?? 'unknown'}`;
+  }
 
   async function handlePlay() {
     if (playing) {
@@ -35,11 +61,9 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
       return;
     }
 
-    // MOCK: fake delay "render audio"
     if (!audioUrl) {
       setLoading(true);
-      await new Promise((r) => setTimeout(r, 1500));
-      // MOCK URL — sau này là merged file từ /api/render-so
+      await new Promise((r) => setTimeout(r, 300));
       setAudioUrl(`/api/tts?slug=${templateSlug}&voice_id=${voiceId}&t=${Date.now()}`);
       setLoading(false);
     }
@@ -57,7 +81,6 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
     }
     setVoiceId(newId);
     setVoicePickerOpen(false);
-    // Reset audio (sẽ render lại với giọng mới)
     audioRef.current?.pause();
     setAudioUrl(null);
     setPlaying(false);
@@ -66,7 +89,7 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
 
   function handleDownload() {
     if (!audioUrl) {
-      showToast('Vui lòng bấm "Nghe" trước để chuẩn bị file');
+      showToast('Vui lòng bấm "Nghe" trước');
       return;
     }
     const a = document.createElement('a');
@@ -77,17 +100,13 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
 
   async function handleShare() {
     if (!audioUrl) {
-      showToast('Vui lòng bấm "Nghe" trước để chuẩn bị file');
+      showToast('Vui lòng bấm "Nghe" trước');
       return;
     }
     const shareUrl = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: templateTitle,
-          text: `Bản ${templateTitle} — SoAI`,
-          url: shareUrl,
-        });
+        await navigator.share({ title: templateTitle, url: shareUrl });
       } catch {}
     } else {
       await navigator.clipboard.writeText(shareUrl);
@@ -95,10 +114,76 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
     }
   }
 
+  async function handleHanhLe() {
+    setRenderStatus('preparing');
+    setRenderError(null);
+
+    try {
+      const voiceKey = voiceKeyFromId(voiceId);
+
+      // 1. Prepare — check cache hoặc lấy segments
+      const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId);
+      if (!res.ok) {
+        setRenderError(res.error ?? 'Không chuẩn bị được sớ');
+        setRenderStatus('error');
+        return;
+      }
+
+      // 2. Nếu đã có merged → chuyển luôn
+      if (res.cached) {
+        setRenderStatus('done');
+        router.push(`/hanh-le/${templateSlug}`);
+        return;
+      }
+
+      if (!res.segments || !res.finalize) {
+        setRenderError('Dữ liệu trả về không hợp lệ');
+        setRenderStatus('error');
+        return;
+      }
+
+      // 3. Merge client
+      setRenderStatus('merging');
+      const urls = res.segments
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((s) => s.audio_url);
+      const mergedBlob = await mergeAudioUrlsToMp3(urls);
+
+      // 4. Encode base64 + upload
+      setRenderStatus('uploading');
+      const base64 = await blobToBase64(mergedBlob);
+      const totalDurationMs = res.segments.reduce((sum, s) => sum + s.duration_ms, 0);
+
+      const finalRes = await finalizeRenderedSo({
+        template_id: res.finalize.template_id,
+        voice_key: res.finalize.voice_key,
+        variables_hash: res.finalize.variables_hash,
+        merged_mp3_base64: base64,
+        duration_ms: totalDurationMs,
+        global_lines: res.finalize.global_lines,
+      });
+
+      if (!finalRes.ok) {
+        setRenderError(finalRes.error ?? 'Upload thất bại');
+        setRenderStatus('error');
+        return;
+      }
+
+      setRenderStatus('done');
+      router.push(`/hanh-le/${templateSlug}`);
+    } catch (e) {
+      console.error('[hanh-le]', e);
+      setRenderError(e instanceof Error ? e.message : 'Lỗi không xác định');
+      setRenderStatus('error');
+    }
+  }
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   }
+
+  const renderInProgress = renderStatus === 'preparing' || renderStatus === 'merging' || renderStatus === 'uploading';
 
   return (
     <div className="relative">
@@ -140,16 +225,13 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
                 <div className="flex-1 font-serif text-sm text-stone-800">
                   {v.label}
                 </div>
-                {v.id === voiceId && (
-                  <span className="text-amber-600">✓</span>
-                )}
+                {v.id === voiceId && <span className="text-amber-600">✓</span>}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Audio hidden */}
       {audioUrl && (
         <audio
           ref={audioRef}
@@ -159,29 +241,15 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
         />
       )}
 
-      {/* 3 nút action */}
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={handlePlay}
           disabled={loading}
           className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 py-4 font-bold tracking-widest text-white shadow-lg shadow-amber-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40 disabled:opacity-60"
         >
-          {loading ? (
-            <>
-              <Spinner />
-              <span className="text-sm">TẢI</span>
-            </>
-          ) : playing ? (
-            <>
-              <span>❚❚</span>
-              <span className="text-sm">DỪNG</span>
-            </>
-          ) : (
-            <>
-              <span>▶</span>
-              <span className="text-sm">NGHE</span>
-            </>
-          )}
+          {loading ? <><Spinner /><span className="text-sm">TẢI</span></> :
+            playing ? <><span>❚❚</span><span className="text-sm">DỪNG</span></> :
+            <><span>▶</span><span className="text-sm">NGHE</span></>}
         </button>
         <button
           onClick={handleDownload}
@@ -206,17 +274,31 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
         </button>
       </div>
 
-      {/* Nút Vào chế độ Hành Lễ */}<Link
-  href={`/hanh-le/${templateSlug}`}
-  className="mt-3 flex items-center justify-center gap-2 rounded-xl border-2 border-amber-500 bg-gradient-to-b from-amber-50 to-white py-4 font-serif font-bold tracking-widest text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
->
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 3l9 9-9 9M3 12h18" />
-  </svg>
-  <span>VÀO CHẾ ĐỘ HÀNH LỄ</span>
-</Link>
+      {/* Nút Vào chế độ Hành Lễ */}
+      <button
+        onClick={handleHanhLe}
+        disabled={renderInProgress}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-500 bg-gradient-to-b from-amber-50 to-white py-4 font-serif font-bold tracking-widest text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {renderStatus === 'preparing' && <><Spinner /><span>ĐANG CHUẨN BỊ...</span></>}
+        {renderStatus === 'merging' && <><Spinner /><span>ĐANG GHÉP ÂM THANH...</span></>}
+        {renderStatus === 'uploading' && <><Spinner /><span>ĐANG LƯU...</span></>}
+        {!renderInProgress && (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 3l9 9-9 9M3 12h18" />
+            </svg>
+            <span>VÀO CHẾ ĐỘ HÀNH LỄ</span>
+          </>
+        )}
+      </button>
 
-      {/* Toast */}
+      {renderStatus === 'error' && renderError && (
+        <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {renderError}
+        </div>
+      )}
+
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-stone-900 px-5 py-2.5 text-sm text-white shadow-xl">
           {toast}
@@ -233,4 +315,16 @@ function Spinner() {
       <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
