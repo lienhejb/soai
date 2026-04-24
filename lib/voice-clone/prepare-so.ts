@@ -196,26 +196,6 @@ const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path)
     if (isDynamicForThien && !isLastSeg) {
       cumulativeOffsetMs += EXTRA_PAUSE_MS;
     }
-
-    for (const line of lines) {
-      globalLines.push({
-        ...line,
-        start_ms: line.start_ms + cumulativeOffsetMs,
-        end_ms: line.end_ms + cumulativeOffsetMs,
-        segment_id: seg.id,
-      });
-    }
-    cumulativeOffsetMs += durationMs;
-
-    // Chèn silence 500ms SAU segment dynamic (chỉ Thầy Thiện, không phải segment cuối)
-    const isLastSegment = segments.indexOf(seg) === segments.length - 1;
-    if (
-      voiceKey === 'thay-thich-thien' &&
-      seg.segment_type === 'dynamic' &&
-      !isLastSegment
-    ) {
-      cumulativeOffsetMs += EXTRA_PAUSE_MS;
-    }
   }
 
   return {
