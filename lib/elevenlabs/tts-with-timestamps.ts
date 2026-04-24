@@ -33,10 +33,11 @@ export async function ttsWithTimestamps(
         'Accept': 'audio/mpeg',
       },
       body: JSON.stringify({
-        text,
-        model_id: 'eleven_v3',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-      }),
+  text,
+  model_id: 'eleven_v3',
+  language_code: 'vi',
+  voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+}),
     }
   );
 
