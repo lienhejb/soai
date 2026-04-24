@@ -63,6 +63,14 @@ export async function middleware(request: NextRequest) {
   await supabase.auth.getSession();  // ← thêm dòng này TRƯỚC
 const { data: { user } } = await supabase.auth.getUser();
 
+// ← THÊM BLOCK NÀY
+// Chưa login + vào protected → redirect gia-dao
+if (!user && isProtected) {
+  const url = request.nextUrl.clone();
+  url.pathname = `/${locale}/gia-dao`;
+  return NextResponse.redirect(url);
+}
+
   // Đã login + vào protected → check onboarded
   if (user && isProtected) {
     const { data: profile } = await supabase
