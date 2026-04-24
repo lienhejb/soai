@@ -19,6 +19,20 @@ export interface LineWithTiming {
  * Endpoint /with-timestamps silent-fallback multilingual_v2 nên không dùng được.
  * Thay vào đó: gen audio v3 thuần + synthesize timestamps theo tỉ lệ ký tự.
  */
+const SILENCE_PAD_MS = 200;
+let silenceBufferCache: Buffer | null = null;
+
+async function getSilenceBuffer(): Promise<Buffer> {
+  if (silenceBufferCache) return silenceBufferCache;
+  
+  const path = require('path');
+  const fs = require('fs/promises');
+  const filePath = path.join(process.cwd(), 'public/audio/silence-200ms.mp3');
+  const buf = await fs.readFile(filePath);
+  silenceBufferCache = buf;
+  return buf;
+}
+
 export async function ttsWithTimestamps(
   text: string,
   voiceId: string
@@ -33,11 +47,11 @@ export async function ttsWithTimestamps(
         'Accept': 'audio/mpeg',
       },
       body: JSON.stringify({
-  text,
-  model_id: 'eleven_v3',
-  language_code: 'vi',
-  voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-}),
+        text,
+        model_id: 'eleven_v3',
+        language_code: 'vi',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
     }
   );
 
@@ -46,14 +60,28 @@ export async function ttsWithTimestamps(
     throw new Error(`ElevenLabs v3 failed: ${err.slice(0, 200)}`);
   }
 
-  const audioBuffer = Buffer.from(await r.arrayBuffer());
-  const durationMs = estimateDurationMs(audioBuffer.length, BITRATE_KBPS);
-
-  if (durationMs === 0) {
+  const rawAudio = Buffer.from(await r.arrayBuffer());
+  const silence = await getSilenceBuffer();
+  
+  // Concat: [silence][audio][silence]
+  const audioBuffer = Buffer.concat([silence, rawAudio, silence]);
+  
+  // Duration của audio thật (không tính silence)
+  const audioDurationMs = estimateDurationMs(rawAudio.length, BITRATE_KBPS);
+  
+  if (audioDurationMs === 0) {
     throw new Error('Không ước lượng được duration của MP3');
   }
 
-  const lines = synthesizeLinesByCharCount(text, durationMs);
+  // Timestamps shift +SILENCE_PAD_MS để khớp với silence đầu
+  const lines = synthesizeLinesByCharCount(text, audioDurationMs).map((line) => ({
+    ...line,
+    start_ms: line.start_ms + SILENCE_PAD_MS,
+    end_ms: line.end_ms + SILENCE_PAD_MS,
+  }));
+  
+  // Total duration = silence đầu + audio + silence cuối
+  const durationMs = SILENCE_PAD_MS + audioDurationMs + SILENCE_PAD_MS;
 
   return { audioBuffer, lines, durationMs };
 }
