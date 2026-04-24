@@ -6,7 +6,8 @@ import { Mp3Encoder } from '@breezystack/lamejs';
  */
 export async function mergeAudioUrlsToMp3(
   urls: string[],
-  voiceKey?: string
+  voiceKey?: string,
+  segmentTypes?: ('static' | 'dynamic')[]
 ): Promise<Blob> {
   if (urls.length === 0) throw new Error('No audio URLs');
 
@@ -28,16 +29,38 @@ export async function mergeAudioUrlsToMp3(
       ? await Promise.all(buffers.map(applyCompressor))
       : buffers;
 
-    // 2. Merge AudioBuffers tuần tự
+    // 2. Tính toán silence extra quanh dynamic segments (chỉ Thầy Thiện)
+    const EXTRA_PAUSE_MS = 500;
     const sampleRate = processedBuffers[0].sampleRate;
     const numChannels = Math.min(...processedBuffers.map((b) => b.numberOfChannels));
-    const totalLength = processedBuffers.reduce((sum, b) => sum + b.length, 0);
+
+    // Array AudioBuffer cần merge, có chèn silence ở vị trí cần
+    const buffersToMerge: AudioBuffer[] = [];
+    const shouldInsertPause =
+      voiceKey === 'thay-thich-thien' && segmentTypes && segmentTypes.length === processedBuffers.length;
+
+    for (let i = 0; i < processedBuffers.length; i++) {
+      // Chèn silence TRƯỚC segment dynamic (nếu không phải segment đầu tiên)
+      if (shouldInsertPause && segmentTypes![i] === 'dynamic' && i > 0) {
+        buffersToMerge.push(createSilenceBuffer(EXTRA_PAUSE_MS, sampleRate, numChannels, ctx));
+      }
+
+      buffersToMerge.push(processedBuffers[i]);
+
+      // Chèn silence SAU segment dynamic (nếu không phải segment cuối)
+      if (shouldInsertPause && segmentTypes![i] === 'dynamic' && i < processedBuffers.length - 1) {
+        buffersToMerge.push(createSilenceBuffer(EXTRA_PAUSE_MS, sampleRate, numChannels, ctx));
+      }
+    }
+
+    // 3. Merge tuần tự
+    const totalLength = buffersToMerge.reduce((sum, b) => sum + b.length, 0);
     const merged = ctx.createBuffer(numChannels, totalLength, sampleRate);
 
     for (let ch = 0; ch < numChannels; ch++) {
       const out = merged.getChannelData(ch);
       let offset = 0;
-      for (const buf of processedBuffers) {
+      for (const buf of buffersToMerge) {
         out.set(buf.getChannelData(ch), offset);
         offset += buf.length;
       }
@@ -118,4 +141,19 @@ async function applyCompressor(buffer: AudioBuffer): Promise<AudioBuffer> {
   source.start(0);
 
   return await offline.startRendering();
+}
+
+/**
+ * Tạo AudioBuffer chứa silence đúng duration, cùng sampleRate + channels với buffer reference.
+ */
+function createSilenceBuffer(
+  durationMs: number,
+  sampleRate: number,
+  numChannels: number,
+  audioContext: AudioContext
+): AudioBuffer {
+  const length = Math.floor((durationMs / 1000) * sampleRate);
+  const silenceBuffer = audioContext.createBuffer(numChannels, length, sampleRate);
+  // Float32Array mặc định fill 0 = silence
+  return silenceBuffer;
 }

@@ -134,25 +134,24 @@ if (!voiceKey) {
 
       // 3. Merge client
       setRenderStatus('merging');
-      const urls = res.segments
-        .sort((a, b) => a.order_index - b.order_index)
-        .map((s) => s.audio_url);
-      const mergedBlob = await mergeAudioUrlsToMp3(urls);
+      const sortedSegments = res.segments.sort((a, b) => a.order_index - b.order_index);
+      const urls = sortedSegments.map((s) => s.audio_url);
+      const segmentTypes = sortedSegments.map((s) => s.segment_type);
+      const mergedBlob = await mergeAudioUrlsToMp3(urls, voiceKey, segmentTypes);
 
       // 4. Encode base64 + upload
       setRenderStatus('uploading');
       const base64 = await blobToBase64(mergedBlob);
-      const totalDurationMs = res.segments.reduce((sum, s) => sum + s.duration_ms, 0);
 
       const finalRes = await finalizeRenderedSo({
-  template_id: res.finalize.template_id,
-  voice_key: res.finalize.voice_key,
-  variables_hash: res.finalize.variables_hash,
-  segments_fingerprint: res.finalize.segments_fingerprint,   // ← THÊM
-  merged_mp3_base64: base64,
-  duration_ms: totalDurationMs,
-  global_lines: res.finalize.global_lines,
-});
+        template_id: res.finalize.template_id,
+        voice_key: res.finalize.voice_key,
+        variables_hash: res.finalize.variables_hash,
+        segments_fingerprint: res.finalize.segments_fingerprint,
+        merged_mp3_base64: base64,
+        duration_ms: res.finalize.total_duration_ms,
+        global_lines: res.finalize.global_lines,
+      });
 
       if (!finalRes.ok) {
         setRenderError(finalRes.error ?? 'Upload thất bại');

@@ -7,10 +7,12 @@ import { createHash } from 'crypto';
 
 const STATIC_BUCKET = 'audio-static';
 const RENDERED_BUCKET = 'audio-rendered';
+const EXTRA_PAUSE_MS = 500; // Silence extra quanh dynamic segment (chỉ Thầy Thiện)
 
 export interface SegmentToPlay {
   segment_id: string;
   order_index: number;
+  segment_type: 'static' | 'dynamic';
   audio_url: string;
   duration_ms: number;
   lines: LineWithTiming[];
@@ -31,6 +33,7 @@ export interface PrepareSoResult {
     variables_hash: string;
     segments_fingerprint: string;
     global_lines: Array<LineWithTiming & { segment_id: string }>;
+    total_duration_ms: number;
   };
 }
 
@@ -162,10 +165,22 @@ const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path)
     segmentsToPlay.push({
       segment_id: seg.id,
       order_index: seg.order_index,
+      segment_type: seg.segment_type as 'static' | 'dynamic',
       audio_url: audioUrl,
       duration_ms: durationMs,
       lines,
     });
+
+    const segIndex = segments.indexOf(seg);
+    const isFirstSeg = segIndex === 0;
+    const isLastSeg = segIndex === segments.length - 1;
+    const isDynamicForThien =
+      voiceKey === 'thay-thich-thien' && seg.segment_type === 'dynamic';
+
+    // Silence TRƯỚC segment dynamic (không phải segment đầu)
+    if (isDynamicForThien && !isFirstSeg) {
+      cumulativeOffsetMs += EXTRA_PAUSE_MS;
+    }
 
     for (const line of lines) {
       globalLines.push({
@@ -176,6 +191,31 @@ const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path)
       });
     }
     cumulativeOffsetMs += durationMs;
+
+    // Silence SAU segment dynamic (không phải segment cuối)
+    if (isDynamicForThien && !isLastSeg) {
+      cumulativeOffsetMs += EXTRA_PAUSE_MS;
+    }
+
+    for (const line of lines) {
+      globalLines.push({
+        ...line,
+        start_ms: line.start_ms + cumulativeOffsetMs,
+        end_ms: line.end_ms + cumulativeOffsetMs,
+        segment_id: seg.id,
+      });
+    }
+    cumulativeOffsetMs += durationMs;
+
+    // Chèn silence 500ms SAU segment dynamic (chỉ Thầy Thiện, không phải segment cuối)
+    const isLastSegment = segments.indexOf(seg) === segments.length - 1;
+    if (
+      voiceKey === 'thay-thich-thien' &&
+      seg.segment_type === 'dynamic' &&
+      !isLastSegment
+    ) {
+      cumulativeOffsetMs += EXTRA_PAUSE_MS;
+    }
   }
 
   return {
@@ -187,6 +227,7 @@ const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path)
       variables_hash: variablesHash,
       segments_fingerprint: segmentsFingerprint,
       global_lines: globalLines,
+      total_duration_ms: cumulativeOffsetMs,
     },
   };
 }
