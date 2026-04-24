@@ -15,6 +15,7 @@ interface Props {
   isAdmin: boolean;
   todaySolar: string;
   todayLunar: string;
+  availableTemplates: Array<{ id: string; slug: string; title: string }>;
   heroEvent: ComputedEvent | null;
   otherEvents: ComputedEvent[];
   userSos: UserSo[];
@@ -33,6 +34,7 @@ export function DashboardClient({
   todayLunar,
   todaySolar,
   heroEvent,
+  availableTemplates,
   otherEvents,
   userSos,
   initialProfile,
@@ -55,6 +57,7 @@ export function DashboardClient({
       event={heroEvent}
       suggestedTemplateSlug={heroEvent.target_slug}
       suggestedTemplateTitle={heroEvent.title}
+      availableTemplates={availableTemplates}
     />
   ) : (
     <div className="mx-5 rounded-2xl border border-stone-200 bg-stone-50 p-6 text-center">
