@@ -7,7 +7,7 @@ import { Mp3Encoder } from '@breezystack/lamejs';
 export async function mergeAudioUrlsToMp3(urls: string[]): Promise<Blob> {
   if (urls.length === 0) throw new Error('No audio URLs');
 
-  const ctx = new AudioContext();
+  const ctx = new AudioContext({ sampleRate: 44100 });
 
   try {
     // 1. Fetch + decode song song
