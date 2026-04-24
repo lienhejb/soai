@@ -155,13 +155,14 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
       const totalDurationMs = res.segments.reduce((sum, s) => sum + s.duration_ms, 0);
 
       const finalRes = await finalizeRenderedSo({
-        template_id: res.finalize.template_id,
-        voice_key: res.finalize.voice_key,
-        variables_hash: res.finalize.variables_hash,
-        merged_mp3_base64: base64,
-        duration_ms: totalDurationMs,
-        global_lines: res.finalize.global_lines,
-      });
+  template_id: res.finalize.template_id,
+  voice_key: res.finalize.voice_key,
+  variables_hash: res.finalize.variables_hash,
+  segments_fingerprint: res.finalize.segments_fingerprint,   // ← THÊM
+  merged_mp3_base64: base64,
+  duration_ms: totalDurationMs,
+  global_lines: res.finalize.global_lines,
+});
 
       if (!finalRes.ok) {
         setRenderError(finalRes.error ?? 'Upload thất bại');
