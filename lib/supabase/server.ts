@@ -13,14 +13,19 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server Component — bỏ qua
-          }
-        },
+  try {
+    cookiesToSet.forEach(({ name, value, options }) => {
+      const persistentOptions = {
+        ...options,
+        maxAge: options.maxAge ?? 60 * 60 * 24 * 30, // 30 ngày
+        sameSite: options.sameSite ?? ('lax' as const),
+      };
+      cookieStore.set(name, value, persistentOptions);
+    });
+  } catch {
+    // Server Component — bỏ qua
+  }
+},
       },
     }
   );

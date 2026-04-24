@@ -48,11 +48,16 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
-          });
-        },
+  cookiesToSet.forEach(({ name, value, options }) => {
+    const persistentOptions = {
+      ...options,
+      maxAge: options.maxAge ?? 60 * 60 * 24 * 30, // 30 ngày
+      sameSite: options.sameSite ?? 'lax' as const,
+    };
+    request.cookies.set(name, value);
+    response.cookies.set(name, value, persistentOptions);
+  });
+},
       },
     }
   );
