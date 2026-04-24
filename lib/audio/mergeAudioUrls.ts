@@ -20,6 +20,28 @@ export async function mergeAudioUrlsToMp3(urls: string[]): Promise<Blob> {
       })
     );
 
+    // 1.5. Normalize peak amplitude per segment (fix volume lệch giữa segment dài/ngắn)
+    const TARGET_PEAK = 0.85;
+    for (const buffer of buffers) {
+      let peak = 0;
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        const data = buffer.getChannelData(ch);
+        for (let i = 0; i < data.length; i++) {
+          const abs = Math.abs(data[i]);
+          if (abs > peak) peak = abs;
+        }
+      }
+      if (peak > 0 && peak !== TARGET_PEAK) {
+        const gain = TARGET_PEAK / peak;
+        for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+          const data = buffer.getChannelData(ch);
+          for (let i = 0; i < data.length; i++) {
+            data[i] *= gain;
+          }
+        }
+      }
+    }
+
     // 2. Merge AudioBuffers tuần tự
     const sampleRate = buffers[0].sampleRate;
     const numChannels = Math.min(...buffers.map((b) => b.numberOfChannels));
