@@ -63,17 +63,20 @@ if (profileCreateErr) {
 // ⬆️ HẾT đoạn thêm — phần migrate draft giữ nguyên bên dưới
 
   // Migrate draft nếu có
-  if (draft) {
+  if (draft && (draft.owner_name?.trim() || draft.address?.trim() || (draft.ancestors?.length ?? 0) > 0)) {
     const userId = data.user.id;
 
-    // 1. Update profile
+    // Chỉ update field CÓ giá trị (không null-out field đã có)
+    const profileUpdates: Record<string, unknown> = {
+      onboarded_at: new Date().toISOString(),
+    };
+    if (draft.owner_name?.trim()) profileUpdates.display_name = draft.owner_name.trim();
+    if (draft.address?.trim()) profileUpdates.address = draft.address.trim();
+    if (draft.gender) profileUpdates.gender = draft.gender;
+
     const { error: profileErr } = await supabase
       .from('profiles')
-      .update({
-        display_name: draft.owner_name || null,
-        address: draft.address || null,
-        onboarded_at: new Date().toISOString(),
-      })
+      .update(profileUpdates)
       .eq('id', userId);
 
     if (profileErr) {
@@ -101,12 +104,20 @@ if (profileCreateErr) {
       }
     }
   } else {
-    // Không có draft — vẫn mark onboarded nếu chưa
+  // Không có draft — check onboarded_at
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('onboarded_at')
+    .eq('id', data.user.id)
+    .single();
+
+  if (!existingProfile?.onboarded_at) {
     await supabase
       .from('profiles')
       .update({ onboarded_at: new Date().toISOString() })
       .eq('id', data.user.id);
   }
+}
 
   return { ok: true };
 }

@@ -60,7 +60,12 @@ export function AuthModal({ open, onClose }: Props) {
     setError(null);
     setLoading(true);
     const draft = loadDraft();
-    const res = await verifyOtp(email, token, draft);
+    const isEmptyDraft = !draft || (
+  !draft.owner_name?.trim() 
+  && !draft.address?.trim() 
+  && (draft.ancestors?.length ?? 0) === 0
+);
+const res = await verifyOtp(email, otp, isEmptyDraft ? null : draft);
     setLoading(false);
     if (!res.ok) {
       setError(res.error || 'Mã không đúng');
