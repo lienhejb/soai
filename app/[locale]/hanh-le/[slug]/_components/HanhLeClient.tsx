@@ -45,13 +45,15 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
 
   // Convert lines → FlatLine[]
   const flatLines: FlatLine[] = data.lines.map((l, i) => ({
-    line_id: l.line_id || `l${i}`,
-    text: l.text,
-    start_ms: l.start_ms,
-    end_ms: l.end_ms,
-    segment_id: l.segment_id ?? '',
-    segment_type: 'STATIC' as const,
-  }));
+  line_id: l.line_id || `l${i}`,
+  text: l.text,
+  start_ms: l.start_ms,
+  end_ms: l.end_ms,
+  global_start_ms: l.start_ms,
+  global_end_ms: l.end_ms,
+  segment_id: l.segment_id ?? '',
+  segment_type: 'STATIC' as const,
+}));
 
   const activeIndex = findActiveIndex(flatLines, currentMs);
   const currentLine = flatLines[activeIndex] ?? null;
@@ -211,7 +213,7 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
 
 function findActiveIndex(lines: FlatLine[], currentMs: number): number {
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (currentMs >= lines[i].start_ms) return i;
+    if (currentMs >= lines[i].global_start_ms) return i;
   }
   return 0;
 }
