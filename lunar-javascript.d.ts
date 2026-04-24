@@ -5,7 +5,7 @@ declare module 'lunar-javascript' {
         getYear(): number;
         getMonth(): number;
         getDay(): number;
-        getYearGanZhi(): string;
+        getYearInGanZhi(): string;
       };
       getYear(): number;
       getMonth(): number;

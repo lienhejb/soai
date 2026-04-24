@@ -18,7 +18,7 @@ export function getTodayInfo(date: Date = new Date()): DateInfo {
 
   const lunarDay = String(lunar.getDay()).padStart(2, '0');
   const lunarMonth = String(lunar.getMonth()).padStart(2, '0');
-  const yearName = `${lunar.getYearGanZhi()}`; // "Bính Ngọ" dạng Hán-Việt
+  const yearName = `${lunar.getYearInGanZhi()}`;
 
   return {
     solar: `${dd}/${mm}/${yyyy}`,

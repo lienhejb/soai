@@ -8,11 +8,12 @@
     "error": "Đã có lỗi xảy ra"
   },
   "nav": {
-    "home": "Trang chủ",
-    "calendar": "Lịch",
-    "so": "Sớ",
-    "profile": "Cá nhân"
-  },
+  "home": "Trang chủ",
+  "calendar": "Lịch",
+  "so": "Sớ",
+  "profile": "Cá nhân",
+  "notifications": "Thông báo"
+},
   "app": {
     "name": "SoAI",
     "tagline": "Trợ lý tâm linh cá nhân"
