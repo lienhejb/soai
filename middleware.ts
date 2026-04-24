@@ -5,7 +5,7 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-const PROTECTED_PATHS = ['/dashboard', '/calendar', '/so', '/voice', '/profile'];
+const PROTECTED_PATHS = ['/dashboard', '/calendar', '/so', '/voice', '/profile', '/admin'];
 const ONBOARDING_PATHS: string[] = []; // Bỏ trống — /gia-dao giờ public cho guest
 
 function stripLocale(pathname: string): { locale: string; path: string } {
@@ -69,6 +69,22 @@ if (!user && isProtected) {
   const url = request.nextUrl.clone();
   url.pathname = `/${locale}/gia-dao`;
   return NextResponse.redirect(url);
+}
+
+// Check admin role cho /admin/*
+const isAdminPath = path === '/admin' || path.startsWith('/admin/');
+if (user && isAdminPath) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'admin') {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}/dashboard`;
+    return NextResponse.redirect(url);
+  }
 }
 
   // Đã login + vào protected → check onboarded
