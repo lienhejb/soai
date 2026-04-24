@@ -65,7 +65,7 @@ export function AuthModal({ open, onClose }: Props) {
   && !draft.address?.trim() 
   && (draft.ancestors?.length ?? 0) === 0
 );
-const res = await verifyOtp(email, otp, isEmptyDraft ? null : draft);
+const res = await verifyOtp(email, token, isEmptyDraft ? null : draft);
     setLoading(false);
     if (!res.ok) {
       setError(res.error || 'Mã không đúng');
