@@ -4,7 +4,10 @@ import { Mp3Encoder } from '@breezystack/lamejs';
  * Fetch N audio URLs, decode bằng Web Audio API, nối thành 1 AudioBuffer,
  * encode sang MP3 (128kbps) → Blob mp3 duy nhất
  */
-export async function mergeAudioUrlsToMp3(urls: string[]): Promise<Blob> {
+export async function mergeAudioUrlsToMp3(
+  urls: string[],
+  voiceKey?: string
+): Promise<Blob> {
   if (urls.length === 0) throw new Error('No audio URLs');
 
   const ctx = new AudioContext({ sampleRate: 44100 });
@@ -20,38 +23,21 @@ export async function mergeAudioUrlsToMp3(urls: string[]): Promise<Blob> {
       })
     );
 
-    // 1.5. Normalize peak amplitude per segment (fix volume lệch giữa segment dài/ngắn)
-    const TARGET_PEAK = 0.85;
-    for (const buffer of buffers) {
-      let peak = 0;
-      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-        const data = buffer.getChannelData(ch);
-        for (let i = 0; i < data.length; i++) {
-          const abs = Math.abs(data[i]);
-          if (abs > peak) peak = abs;
-        }
-      }
-      if (peak > 0 && peak !== TARGET_PEAK) {
-        const gain = TARGET_PEAK / peak;
-        for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-          const data = buffer.getChannelData(ch);
-          for (let i = 0; i < data.length; i++) {
-            data[i] *= gain;
-          }
-        }
-      }
-    }
+    // 1.5. Áp Dynamic Range Compressor cho giọng có dynamic range lớn (Thầy Thiện)
+    const processedBuffers = voiceKey === 'thay-thich-thien'
+      ? await Promise.all(buffers.map(applyCompressor))
+      : buffers;
 
     // 2. Merge AudioBuffers tuần tự
-    const sampleRate = buffers[0].sampleRate;
-    const numChannels = Math.min(...buffers.map((b) => b.numberOfChannels));
-    const totalLength = buffers.reduce((sum, b) => sum + b.length, 0);
+    const sampleRate = processedBuffers[0].sampleRate;
+    const numChannels = Math.min(...processedBuffers.map((b) => b.numberOfChannels));
+    const totalLength = processedBuffers.reduce((sum, b) => sum + b.length, 0);
     const merged = ctx.createBuffer(numChannels, totalLength, sampleRate);
 
     for (let ch = 0; ch < numChannels; ch++) {
       const out = merged.getChannelData(ch);
       let offset = 0;
-      for (const buf of buffers) {
+      for (const buf of processedBuffers) {
         out.set(buf.getChannelData(ch), offset);
         offset += buf.length;
       }
@@ -100,4 +86,36 @@ function floatToInt16(floatArr: Float32Array): Int16Array {
     int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
   return int16;
+}
+
+/**
+ * Áp dụng Dynamic Range Compressor lên AudioBuffer qua OfflineAudioContext.
+ * Dùng cho giọng có dynamic range lớn (vd Thầy Thiện): nén peak, bù gain.
+ * Trả về AudioBuffer mới đã compressed.
+ */
+async function applyCompressor(buffer: AudioBuffer): Promise<AudioBuffer> {
+  const offline = new OfflineAudioContext(
+    buffer.numberOfChannels,
+    buffer.length,
+    buffer.sampleRate
+  );
+
+  const source = offline.createBufferSource();
+  source.buffer = buffer;
+
+  const compressor = offline.createDynamicsCompressor();
+  compressor.threshold.value = -18;  // dB — bắt đầu nén
+  compressor.knee.value = 6;          // dB — nén mượt
+  compressor.ratio.value = 3;         // 3:1 — vừa phải, không robot
+  compressor.attack.value = 0.003;    // 3ms — bắt transient nhanh
+  compressor.release.value = 0.25;    // 250ms — release tự nhiên
+
+  // Makeup gain bù lại volume sau nén
+  const makeup = offline.createGain();
+  makeup.gain.value = 1.4; // +2.9 dB — cân bằng với audio gốc
+
+  source.connect(compressor).connect(makeup).connect(offline.destination);
+  source.start(0);
+
+  return await offline.startRendering();
 }
