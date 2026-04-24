@@ -1,6 +1,5 @@
-import { parseBuffer } from 'music-metadata';
-
 const ELEVENLABS_BASE = 'https://api.elevenlabs.io/v1';
+const BITRATE_KBPS = 128; // khớp với output_format=mp3_44100_128
 
 export interface TtsWithTimestampsResult {
   audioBuffer: Buffer;
@@ -47,13 +46,10 @@ export async function ttsWithTimestamps(
   }
 
   const audioBuffer = Buffer.from(await r.arrayBuffer());
-
-  // Parse duration từ MP3 header
-  const metadata = await parseBuffer(audioBuffer, { mimeType: 'audio/mpeg' });
-  const durationMs = Math.round((metadata.format.duration ?? 0) * 1000);
+  const durationMs = estimateDurationMs(audioBuffer.length, BITRATE_KBPS);
 
   if (durationMs === 0) {
-    throw new Error('Không đọc được duration của MP3');
+    throw new Error('Không ước lượng được duration của MP3');
   }
 
   const lines = synthesizeLinesByCharCount(text, durationMs);
@@ -62,8 +58,19 @@ export async function ttsWithTimestamps(
 }
 
 /**
+ * Ước lượng duration từ file size + bitrate CBR.
+ * Công thức: duration_sec = file_size_bits / bitrate_bps
+ *         = (size_bytes * 8) / (kbps * 1000)
+ * Sai số vài chục ms do ID3 tag ở đầu file — chấp nhận được.
+ */
+function estimateDurationMs(fileSizeBytes: number, bitrateKbps: number): number {
+  if (fileSizeBytes <= 0 || bitrateKbps <= 0) return 0;
+  const durationSec = (fileSizeBytes * 8) / (bitrateKbps * 1000);
+  return Math.round(durationSec * 1000);
+}
+
+/**
  * Tách text thành lines theo dấu câu, phân bổ timestamps theo tỉ lệ ký tự.
- * Không chính xác tuyệt đối nhưng đủ để karaoke "gần đúng" với giọng v3.
  */
 function synthesizeLinesByCharCount(
   text: string,
@@ -94,7 +101,7 @@ function synthesizeLinesByCharCount(
     cursorMs += share;
   }
 
-  // Ép line cuối = totalDurationMs (tránh sai số làm tròn)
+  // Ép line cuối = totalDurationMs (fix sai số làm tròn)
   if (lines.length > 0) {
     lines[lines.length - 1].end_ms = totalDurationMs;
   }
@@ -103,8 +110,7 @@ function synthesizeLinesByCharCount(
 }
 
 /**
- * Tách text theo dấu câu (. ! ?). Giữ nguyên dấu trong text của line.
- * Line cuối có thể không có dấu — vẫn giữ.
+ * Tách text theo dấu câu (. ! ?). Giữ dấu trong text của line.
  */
 function splitByPunctuation(text: string): string[] {
   const parts = text.split(/([.!?])/);
