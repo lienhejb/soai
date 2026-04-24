@@ -1,5 +1,6 @@
+import { parseBuffer } from 'music-metadata';
+
 const ELEVENLABS_BASE = 'https://api.elevenlabs.io/v1';
-const BITRATE_KBPS = 128; // khớp với output_format=mp3_44100_128
 
 export interface TtsWithTimestampsResult {
   audioBuffer: Buffer;
@@ -66,11 +67,12 @@ export async function ttsWithTimestamps(
   // Concat: [silence][audio][silence]
   const audioBuffer = Buffer.concat([silence, rawAudio, silence]);
   
-  // Duration của audio thật (không tính silence)
-  const audioDurationMs = estimateDurationMs(rawAudio.length, BITRATE_KBPS);
+  // Duration chuẩn bằng parse MP3 metadata (bỏ qua ID3 tag)
+  const metadata = await parseBuffer(rawAudio, { mimeType: 'audio/mpeg' });
+  const audioDurationMs = Math.round((metadata.format.duration ?? 0) * 1000);
   
   if (audioDurationMs === 0) {
-    throw new Error('Không ước lượng được duration của MP3');
+    throw new Error('Không parse được duration của MP3');
   }
 
   // Timestamps shift +SILENCE_PAD_MS để khớp với silence đầu
@@ -84,18 +86,6 @@ export async function ttsWithTimestamps(
   const durationMs = SILENCE_PAD_MS + audioDurationMs + SILENCE_PAD_MS;
 
   return { audioBuffer, lines, durationMs };
-}
-
-/**
- * Ước lượng duration từ file size + bitrate CBR.
- * Công thức: duration_sec = file_size_bits / bitrate_bps
- *         = (size_bytes * 8) / (kbps * 1000)
- * Sai số vài chục ms do ID3 tag ở đầu file — chấp nhận được.
- */
-function estimateDurationMs(fileSizeBytes: number, bitrateKbps: number): number {
-  if (fileSizeBytes <= 0 || bitrateKbps <= 0) return 0;
-  const durationSec = (fileSizeBytes * 8) / (bitrateKbps * 1000);
-  return Math.round(durationSec * 1000);
 }
 
 /**
