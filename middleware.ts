@@ -24,6 +24,14 @@ function matchPath(pathname: string, patterns: string[]): boolean {
   return patterns.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
+function redirectWithCookies(url: URL, response: NextResponse): NextResponse {
+  const redirect = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((c) => {
+    redirect.cookies.set(c.name, c.value);
+  });
+  return redirect;
+}
+
 export async function middleware(request: NextRequest) {
   const response = intlMiddleware(request);
 
@@ -68,7 +76,7 @@ const { data: { user } } = await supabase.auth.getUser();
 if (!user && isProtected) {
   const url = request.nextUrl.clone();
   url.pathname = `/${locale}/gia-dao`;
-  return NextResponse.redirect(url);
+  return redirectWithCookies(url, response);
 }
 
 // Check admin role cho /admin/*
@@ -83,7 +91,7 @@ if (user && isAdminPath) {
   if (profile?.role !== 'admin') {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/dashboard`;
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url, response);
   }
 }
 
@@ -98,7 +106,7 @@ if (user && isAdminPath) {
     if (!profile?.onboarded_at) {
       const url = request.nextUrl.clone();
       url.pathname = `/${locale}/gia-dao`;
-      return NextResponse.redirect(url);
+      return redirectWithCookies(url, response);
     }
   }
 
@@ -113,7 +121,7 @@ if (user && isAdminPath) {
     if (profile?.onboarded_at) {
       const url = request.nextUrl.clone();
       url.pathname = `/${locale}/dashboard`;
-      return NextResponse.redirect(url);
+      return redirectWithCookies(url, response);
     }
   }
 
