@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { LineWithTiming } from '@/lib/elevenlabs/tts-with-timestamps';
 
 const RENDERED_BUCKET = 'audio-rendered';
@@ -23,6 +24,7 @@ export interface FinalizeResult {
 
 export async function finalizeRenderedSo(input: FinalizeInput): Promise<FinalizeResult> {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Chưa đăng nhập' };
 
@@ -32,7 +34,7 @@ export async function finalizeRenderedSo(input: FinalizeInput): Promise<Finalize
   // Path kèm fingerprint để tránh collision giữa các version
   const path = `${user.id}/merged_${input.template_id}_${input.voice_key}_${input.variables_hash.slice(0, 8)}_${input.segments_fingerprint.slice(0, 8)}.mp3`;
 
-  const { error: upErr } = await supabase.storage
+  const { error: upErr } = await admin.storage
     .from(RENDERED_BUCKET)
     .upload(path, mp3Buffer, {
       contentType: 'audio/mpeg',
@@ -44,7 +46,7 @@ export async function finalizeRenderedSo(input: FinalizeInput): Promise<Finalize
     return { ok: false, error: `Upload lỗi: ${upErr.message}` };
   }
 
-  const { data: urlData } = supabase.storage.from(RENDERED_BUCKET).getPublicUrl(path);
+  const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path);
 
   // Xóa record cũ (cùng user + template + voice + variables nhưng khác fingerprint)
   await supabase
