@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ttsWithTimestamps, type LineWithTiming } from '@/lib/elevenlabs/tts-with-timestamps';
 import { createHash } from 'crypto';
 
@@ -39,6 +40,7 @@ export async function prepareRenderedSo(
   voiceProviderId: string
 ): Promise<PrepareSoResult> {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Chưa đăng nhập' };
 
@@ -125,6 +127,7 @@ export async function prepareRenderedSo(
     if (seg.segment_type === 'static') {
       const staticData = await getOrGenerateStaticAudio(
         supabase,
+        admin,
         seg.id,
         seg.text,
         voiceKey,
@@ -139,15 +142,15 @@ export async function prepareRenderedSo(
       try {
         const gen = await ttsWithTimestamps(renderedText, voiceProviderId);
         const path = `${user.id}/dyn_${seg.id}_${voiceKey}_${variablesHash.slice(0, 8)}.mp3`;
-        const { error: upErr } = await supabase.storage
-          .from(RENDERED_BUCKET)
-          .upload(path, gen.audioBuffer, {
-            contentType: 'audio/mpeg',
-            upsert: true,
-          });
-        if (upErr) return { ok: false, error: `Upload dynamic: ${upErr.message}` };
+        const { error: upErr } = await admin.storage
+  .from(RENDERED_BUCKET)
+  .upload(path, gen.audioBuffer, {
+    contentType: 'audio/mpeg',
+    upsert: true,
+  });
+if (upErr) return { ok: false, error: `Upload dynamic: ${upErr.message}` };
 
-        const { data: urlData } = supabase.storage.from(RENDERED_BUCKET).getPublicUrl(path);
+const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path);
         audioUrl = urlData.publicUrl;
         lines = gen.lines;
         durationMs = gen.durationMs;
@@ -192,6 +195,7 @@ export async function prepareRenderedSo(
 
 async function getOrGenerateStaticAudio(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  admin: ReturnType<typeof createAdminClient>,
   segmentId: string,
   text: string,
   voiceKey: string,
@@ -229,15 +233,15 @@ async function getOrGenerateStaticAudio(
       .eq('segment_id', segmentId)
       .eq('voice_key', voiceKey);
 
-    const { error: upErr } = await supabase.storage
-      .from(STATIC_BUCKET)
-      .upload(path, gen.audioBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: true,
-      });
-    if (upErr) return { ok: false, error: `Upload static: ${upErr.message}` };
+    const { error: upErr } = await admin.storage
+  .from(STATIC_BUCKET)
+  .upload(path, gen.audioBuffer, {
+    contentType: 'audio/mpeg',
+    upsert: true,
+  });
+if (upErr) return { ok: false, error: `Upload static: ${upErr.message}` };
 
-    const { data: urlData } = supabase.storage.from(STATIC_BUCKET).getPublicUrl(path);
+const { data: urlData } = admin.storage.from(STATIC_BUCKET).getPublicUrl(path);
 
     await supabase.from('static_audio').insert({
       segment_id: segmentId,
