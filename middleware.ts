@@ -63,13 +63,6 @@ export async function middleware(request: NextRequest) {
   await supabase.auth.getSession();  // ← thêm dòng này TRƯỚC
 const { data: { user } } = await supabase.auth.getUser();
 
-  // Đã login + vào auth → redirect dashboard
-  if (user && isAuth) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/dashboard`;
-    return NextResponse.redirect(url);
-  }
-
   // Đã login + vào protected → check onboarded
   if (user && isProtected) {
     const { data: profile } = await supabase
