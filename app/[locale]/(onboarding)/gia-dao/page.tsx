@@ -1,5 +1,6 @@
 import { SetupForm } from './_components/SetupForm';
 import type { Voice } from './_components/types';
+import { LoginButton } from './_components/LoginButton';
 
 // Mock data - sẽ thay bằng Supabase query
 const MOCK_VOICES: Voice[] = [
@@ -51,25 +52,19 @@ export default function GiaDaoSetupPage() {
 
 function Header() {
   return (
-    <header className="relative border-b border-[var(--gold-soft)] bg-[var(--bg-paper)]">
+    <header className="relative border-b border-stone-200 bg-white">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-4">
-        <div className="w-9" aria-hidden />
         <div className="flex items-center gap-2">
           <LotusMark />
-          <span className="font-serif text-lg tracking-widest text-[var(--ink)]">
+          <span className="font-serif text-lg tracking-widest text-stone-800">
             SoAI
           </span>
         </div>
-        <div className="h-9 w-9 overflow-hidden rounded-full border border-[var(--gold-soft)] bg-[var(--bg-paper-2)]">
-          <div className="flex h-full w-full items-center justify-center text-xs text-[var(--muted)]">
-            NV
-          </div>
-        </div>
+        <LoginButton />
       </div>
     </header>
   );
 }
-
 function LotusMark() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>

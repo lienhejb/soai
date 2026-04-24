@@ -1,48 +1,84 @@
 import { createClient } from '@/lib/supabase/server';
-import { Link } from '@/i18n/navigation';
+import { DashboardClient } from './_components/DashboardClient';
+import type { UpcomingEvent, UserSo } from './_components/types';
+
+const MOCK_UPCOMING_EVENTS: UpcomingEvent[] = [
+  {
+    event_id: 'khan-ram-hang-thang',
+    event_type: 'RAM',
+    title: 'Văn khấn Rằm tháng Tư',
+    date_display: '15/04 Âm lịch',
+    days_left: 3,
+    is_hero: true,
+  },
+  {
+    event_id: 'khan-mung-mot-hang-thang',
+    event_type: 'MONG',
+    title: 'Văn khấn Mùng 1 tháng Năm',
+    date_display: '01/05 Âm lịch',
+    days_left: 18,
+    is_hero: false,
+  },
+];
+
+const MOCK_USER_SOS: UserSo[] = [
+  {
+    user_so_id: 'khan-ram-hang-thang',
+    nickname: 'Sớ Rằm cầu an',
+    event_type: 'RAM',
+    is_default: true,
+    updated_at: new Date().toISOString(),
+  },
+  {
+    user_so_id: 'khan-mung-mot-hang-thang',
+    nickname: 'Sớ Mùng 1',
+    event_type: 'MONG',
+    is_default: false,
+    updated_at: new Date().toISOString(),
+  },
+  {
+    user_so_id: 'khan-gio-cha',
+    nickname: 'Sớ Giỗ Cha',
+    event_type: 'GIO',
+    is_default: false,
+    updated_at: new Date().toISOString(),
+  },
+];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('display_name, gender, birth_year, address, role')
     .eq('id', user!.id)
     .single();
 
+  const heroEvent = MOCK_UPCOMING_EVENTS.find((e) => e.is_hero) ?? MOCK_UPCOMING_EVENTS[0];
+  const otherEvents = MOCK_UPCOMING_EVENTS.filter((e) => !e.is_hero);
+
+  const honorific = profile?.gender === 'female' ? 'Bà' : 'Ông';
+  const fullName = profile?.display_name || 'Tín chủ';
+  const isAdmin = profile?.role === 'admin';
+
   return (
-    <div className="px-5 pt-8">
-      <div className="mb-10">
-        <p className="text-sm text-stone-500">Chào mừng</p>
-        <h1 className="mt-1 font-serif text-3xl font-bold text-stone-800">
-          {profile?.display_name || 'Tín chủ'}
-        </h1>
-      </div>
-
-      <h2 className="mb-4 font-serif text-xl text-stone-800">
-        Dâng sớ hôm nay
-      </h2>
-
-      <div className="space-y-3">
-        <SoCard slug="khan-ram-hang-thang" title="Văn khấn Rằm" subtitle="Ngày Rằm hàng tháng" />
-        <SoCard slug="khan-mung-mot-hang-thang" title="Văn khấn Mùng 1" subtitle="Mùng 1 đầu tháng" />
-      </div>
-    </div>
-  );
-}
-
-function SoCard({ slug, title, subtitle }: { slug: string; title: string; subtitle: string }) {
-  return (
-    <Link
-      href={`/so/${slug}`}
-      className="block rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5"
-    >
-      <h3 className="font-serif text-lg font-semibold text-stone-800">{title}</h3>
-      <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
-      <div className="mt-3 text-sm font-medium text-amber-600">
-        Xem sớ →
-      </div>
-    </Link>
+    <DashboardClient
+      honorific={honorific}
+      fullName={fullName}
+      isAdmin={isAdmin}
+      todayLunar="15 Tháng 3 năm Bính Ngọ"
+      heroEvent={heroEvent}
+      suggestedTemplateSlug={heroEvent?.event_id}
+      suggestedTemplateTitle={heroEvent?.title}
+      otherEvents={otherEvents}
+      userSos={MOCK_USER_SOS}
+      initialProfile={{
+        display_name: profile?.display_name || '',
+        gender: profile?.gender ?? null,
+        birth_year: profile?.birth_year ?? null,
+        address: profile?.address || '',
+      }}
+    />
   );
 }
