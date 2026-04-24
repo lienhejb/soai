@@ -3,12 +3,13 @@
 interface Props {
   honorific: string;
   fullName: string;
+  todaySolar: string;
   todayLunar: string;
   onEdit: () => void;
   isAdmin?: boolean;
 }
 
-export function DashboardGreeting({ honorific, fullName, todayLunar, onEdit, isAdmin }: Props) {
+export function DashboardGreeting({ honorific, fullName, todaySolar, todayLunar, onEdit, isAdmin }: Props) {
   return (
     <div className="px-5 pb-5 pt-8">
       <div className="flex items-start justify-between gap-3">
@@ -48,6 +49,9 @@ export function DashboardGreeting({ honorific, fullName, todayLunar, onEdit, isA
 
       <p className="mt-2 text-xs text-stone-400">
         Hôm nay là ngày <span className="font-medium text-amber-700">{todayLunar}</span> Âm lịch
+      </p>
+      <p className="mt-1 text-xs text-stone-400">
+        Ngày {todaySolar} Dương lịch
       </p>
     </div>
   );

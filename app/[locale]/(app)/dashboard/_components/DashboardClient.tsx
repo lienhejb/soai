@@ -6,17 +6,17 @@ import { HeroEventCard } from './HeroEventCard';
 import { UpcomingEvents } from './UpcomingEvents';
 import { SoLibrary } from './SoLibrary';
 import { EditProfileModal } from './EditProfileModal';
-import type { UpcomingEvent, UserSo } from './types';
+import type { ComputedEvent } from '@/lib/lunar';
+import type { UserSo } from './types';
 
 interface Props {
   honorific: string;
   fullName: string;
   isAdmin: boolean;
+  todaySolar: string;
   todayLunar: string;
-  heroEvent: UpcomingEvent;
-  suggestedTemplateSlug?: string;
-  suggestedTemplateTitle?: string;
-  otherEvents: UpcomingEvent[];
+  heroEvent: ComputedEvent | null;
+  otherEvents: ComputedEvent[];
   userSos: UserSo[];
   initialProfile: {
     display_name: string;
@@ -31,9 +31,8 @@ export function DashboardClient({
   fullName,
   isAdmin,
   todayLunar,
+  todaySolar,
   heroEvent,
-  suggestedTemplateSlug,
-  suggestedTemplateTitle,
   otherEvents,
   userSos,
   initialProfile,
@@ -42,30 +41,37 @@ export function DashboardClient({
 
   return (
     <>
-      <DashboardGreeting
-        honorific={honorific}
-        fullName={fullName}
-        todayLunar={todayLunar}
-        onEdit={() => setEditOpen(true)}
-        isAdmin={isAdmin}
-      />
+  <DashboardGreeting
+    honorific={honorific}
+    fullName={fullName}
+    todaySolar={todaySolar}
+    todayLunar={todayLunar}
+    onEdit={() => setEditOpen(true)}
+    isAdmin={isAdmin}
+  />
 
-      <HeroEventCard
-        event={heroEvent}
-        suggestedTemplateSlug={suggestedTemplateSlug}
-        suggestedTemplateTitle={suggestedTemplateTitle}
-      />
+  {heroEvent ? (
+    <HeroEventCard
+      event={heroEvent}
+      suggestedTemplateSlug={heroEvent.target_slug}
+      suggestedTemplateTitle={heroEvent.title}
+    />
+  ) : (
+    <div className="mx-5 rounded-2xl border border-stone-200 bg-stone-50 p-6 text-center">
+      <p className="text-sm text-stone-500">Không có sự kiện nào trong 30 ngày tới</p>
+    </div>
+  )}
 
-      <UpcomingEvents events={otherEvents} />
+  <UpcomingEvents events={otherEvents} />
 
-      <SoLibrary sos={userSos} />
+  <SoLibrary sos={userSos} />
 
-      <EditProfileModal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        initial={initialProfile}
-        onSaved={() => {}}
-      />
-    </>
+  <EditProfileModal
+    open={editOpen}
+    onClose={() => setEditOpen(false)}
+    initial={initialProfile}
+    onSaved={() => {}}
+  />
+</>
   );
 }
