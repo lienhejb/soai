@@ -1,5 +1,5 @@
 import { Link } from '@/i18n/navigation';
-import type { UpcomingEvent } from './types';
+import type { ComputedEvent as UpcomingEvent } from '@/lib/lunar';
 import { EVENT_TYPE_LABEL } from './types';
 
 interface Props {
@@ -67,11 +67,6 @@ function EventIcon({ type }: { type: UpcomingEvent['event_type'] }) {
     RAM: '◯',
     MONG: '●',
     GIO: '卍',
-    TAT_NIEN: '春',
-    CUNG_GIA_TIEN: '祖',
-    LE_TET: '福',
-    KHAI_TRUONG: '開',
-    NHAP_TRACH: '家',
     KHAC: '・',
   };
   return (

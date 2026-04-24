@@ -1,7 +1,7 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import type { UpcomingEvent } from './types';
+import type { ComputedEvent as UpcomingEvent } from '@/lib/lunar';
 
 interface Props {
   event: UpcomingEvent;
