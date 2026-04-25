@@ -7,6 +7,46 @@ import { GUEST_PROFILE } from '@/lib/guest';
 
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata({ params }: PageProps) {
+  const { slug, locale } = await params;
+  const supabase = await createClient();
+
+  const { data: template } = await supabase
+    .from('templates')
+    .select('title')
+    .eq('slug', slug)
+    .eq('locale', 'vi')
+    .eq('is_active', true)
+    .single();
+
+  if (!template) {
+    return { title: 'Không tìm thấy sớ' };
+  }
+
+  const title = `${template.title} — Nghe tự động bằng AI | GiongDoc`;
+  const description = `Nghe ${template.title} được đọc bằng giọng AI tự nhiên. Hành lễ tại gia tiện lợi cùng GiongDoc.`;
+  const url = `https://giongdoc.com/${locale}/so/${slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: 'GiongDoc',
+      locale: 'vi_VN',
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  };
+}
+
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
 }
