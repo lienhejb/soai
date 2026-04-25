@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { DashboardGreeting } from './DashboardGreeting';
 import { HeroEventCard } from './HeroEventCard';
-import { UpcomingEvents } from './UpcomingEvents';
+import { UpcomingEventsBanner } from './UpcomingEventsBanner';
 import { SoLibrary } from './SoLibrary';
 import { EditProfileModal } from './EditProfileModal';
 import type { ComputedEvent } from '@/lib/lunar';
@@ -65,7 +65,7 @@ export function DashboardClient({
     </div>
   )}
 
-  <UpcomingEvents events={otherEvents} />
+  <UpcomingEventsBanner events={otherEvents} />
 
   <SoLibrary sos={userSos} />
 
