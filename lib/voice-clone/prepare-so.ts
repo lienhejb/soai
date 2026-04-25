@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ttsWithTimestamps, type LineWithTiming } from '@/lib/elevenlabs/tts-with-timestamps';
 import { createHash } from 'crypto';
 import { getDateStringsForSo } from '@/lib/lunar';
-import { GUEST_USER_ID, GUEST_PROFILE } from '@/lib/guest';
+import { getGuestUserId, GUEST_PROFILE } from '@/lib/guest';
 
 const STATIC_BUCKET = 'audio-static';
 const RENDERED_BUCKET = 'audio-rendered';
@@ -50,7 +50,7 @@ export async function prepareRenderedSo(
 
   // Guest mode: user chưa login → dùng system guest user (cố định)
   // Mọi guest share chung 1 user_id → cache cross-guest, tiết kiệm credit
-  const userId = user?.id ?? GUEST_USER_ID;
+  const userId = user?.id ?? getGuestUserId();
   const isGuest = !user;
 
   const { data: template } = await supabase
