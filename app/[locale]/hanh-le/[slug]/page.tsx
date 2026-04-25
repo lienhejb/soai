@@ -64,7 +64,7 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
   }
 
   // Gọi prepareRenderedSo — đã warm cache từ trang sớ rồi nên đa số là cache hit
-  const res = await prepareRenderedSo(slug, voiceKey!, voiceProviderId);
+  const res = await prepareRenderedSo(slug, voiceKey!, voiceProviderId!);
 
   if (!res.ok) {
     console.error('[hanh-le] prepare error:', res.error);
