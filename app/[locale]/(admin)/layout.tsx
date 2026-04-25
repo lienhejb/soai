@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: 'Admin — GiongDoc',
 };
 
-export default function AdminLayout({... children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-stone-50/50">
       {/* Admin Header */}
