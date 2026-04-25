@@ -3,11 +3,15 @@
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 
-export function AppHeader({ hasNotification = true }: { hasNotification?: boolean }) {
+export function AppHeader({
+  hasNotification = true,
+  initials = 'NV',
+}: {
+  hasNotification?: boolean;
+  initials?: string;
+}) {
   const t = useTranslations('nav');
-
-  // TODO(auth): lấy initials từ profile.display_name sau khi có Auth
-  const avatarInitials = 'NV';
+  const avatarInitials = initials;
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--gold-soft)] bg-[var(--bg-paper)]/95 backdrop-blur">
