@@ -150,73 +150,34 @@ async function prepareAndMergeForListen(): Promise<string | null> {
   }
 
   async function handleHanhLe() {
-    setRenderStatus('preparing');
-    setRenderError(null);
+  setRenderStatus('preparing');
+  setRenderError(null);
 
-    try {
-      const voiceKey = voices.find((v) => v.id === voiceId)?.voice_key;
-if (!voiceKey) {
-  setRenderError('Voice không hợp lệ');
-  setRenderStatus('error');
-  return;
-}
-
-      // 1. Prepare — check cache hoặc lấy segments
-      const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId);
-      if (!res.ok) {
-        setRenderError(res.error ?? 'Không chuẩn bị được sớ');
-        setRenderStatus('error');
-        return;
-      }
-
-      // 2. Nếu đã có merged → chuyển luôn
-      if (res.cached) {
-        setRenderStatus('done');
-        router.push(`/hanh-le/${templateSlug}`);
-        return;
-      }
-
-      if (!res.segments || !res.finalize) {
-        setRenderError('Dữ liệu trả về không hợp lệ');
-        setRenderStatus('error');
-        return;
-      }
-
-      // 3. Merge client
-      setRenderStatus('merging');
-      const sortedSegments = res.segments.sort((a, b) => a.order_index - b.order_index);
-      const urls = sortedSegments.map((s) => s.audio_url);
-      const segmentTypes = sortedSegments.map((s) => s.segment_type);
-      const mergedBlob = await mergeAudioUrlsToMp3(urls, voiceKey, segmentTypes);
-
-      // 4. Encode base64 + upload
-      setRenderStatus('uploading');
-      const base64 = await blobToBase64(mergedBlob);
-
-      const finalRes = await finalizeRenderedSo({
-        template_id: res.finalize.template_id,
-        voice_key: res.finalize.voice_key,
-        variables_hash: res.finalize.variables_hash,
-        segments_fingerprint: res.finalize.segments_fingerprint,
-        merged_mp3_base64: base64,
-        duration_ms: res.finalize.total_duration_ms,
-        global_lines: res.finalize.global_lines,
-      });
-
-      if (!finalRes.ok) {
-        setRenderError(finalRes.error ?? 'Upload thất bại');
-        setRenderStatus('error');
-        return;
-      }
-
-      setRenderStatus('done');
-      router.push(`/hanh-le/${templateSlug}`);
-    } catch (e) {
-      console.error('[hanh-le]', e);
-      setRenderError(e instanceof Error ? e.message : 'Lỗi không xác định');
+  try {
+    const voiceKey = voices.find((v) => v.id === voiceId)?.voice_key;
+    if (!voiceKey) {
+      setRenderError('Voice không hợp lệ');
       setRenderStatus('error');
+      return;
     }
+
+    // Prepare để warm cache static_audio + dynamic_audio (segment-level)
+    // Bỏ qua merge + upload — sang /hanh-le sẽ tự fetch segments
+    const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId);
+    if (!res.ok) {
+      setRenderError(res.error ?? 'Không chuẩn bị được sớ');
+      setRenderStatus('error');
+      return;
+    }
+
+    setRenderStatus('done');
+    router.push(`/hanh-le/${templateSlug}?voice=${voiceKey}`);
+  } catch (e) {
+    console.error('[hanh-le]', e);
+    setRenderError(e instanceof Error ? e.message : 'Lỗi không xác định');
+    setRenderStatus('error');
   }
+}
 
   function showToast(msg: string) {
     setToast(msg);
