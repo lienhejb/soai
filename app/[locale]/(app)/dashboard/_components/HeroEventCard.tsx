@@ -43,21 +43,28 @@ export function HeroEventCard({
         {/* Divider dọc */}
         <div className="h-16 w-px bg-amber-200/60" />
 
-        {/* Cột giữa: Tên sự kiện + nút đổi (nếu nhiều template) */}
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate font-serif text-lg font-bold text-stone-800">
-            {currentTitle ?? event.title}
-          </h2>
-          {availableTemplates.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setSheetOpen(true)}
-              className="mt-1 inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800"
-            >
-              <SwapIcon /> Đổi văn khấn
-            </button>
-          )}
-        </div>
+        {/* Cột giữa: Tên sự kiện + days_left + nút đổi */}
+<div className="min-w-0 flex-1">
+  <h2 className="truncate font-serif text-lg font-bold text-stone-800">
+    {currentTitle ?? event.title}
+  </h2>
+  <p className="mt-0.5 text-xs text-stone-400">
+    {event.days_left === 0 ? (
+      <span className="font-bold text-amber-600">Hôm nay</span>
+    ) : (
+      <>Còn <span className="font-bold text-amber-600">{event.days_left} ngày</span></>
+    )}
+  </p>
+  {availableTemplates.length > 1 && (
+    <button
+      type="button"
+      onClick={() => setSheetOpen(true)}
+      className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800"
+    >
+      <SwapIcon /> Đổi văn khấn
+    </button>
+  )}
+</div>
       </div>
 
       {/* Nút Dâng Sớ */}
