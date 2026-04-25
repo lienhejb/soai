@@ -227,12 +227,12 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
           className="flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
         >
           <PriestAvatar
-            name={MOCK_PRIEST.name}
-            imageUrl={MOCK_PRIEST.imageUrl}
-            isPlaying={isPlaying}
-            size="sm"
-            showInfo={false}
-          />
+  name={data.priest.name}
+  imageUrl={data.priest.imageUrl}
+  isPlaying={isPlaying}
+  size="sm"
+  showInfo={false}
+/>
         </button>
       </header>
 
@@ -241,9 +241,9 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
           <KaraokeView lines={flatLines} activeIndex={activeIndex} />
         ) : (
           <AvatarMode
-            name={MOCK_PRIEST.name}
-            role={MOCK_PRIEST.role}
-            imageUrl={MOCK_PRIEST.imageUrl}
+            name={data.priest.name}
+            role={data.priest.role}
+            imageUrl={data.priest.imageUrl}
             isPlaying={isPlaying}
             currentLine={currentLine}
             currentMs={currentMs}
