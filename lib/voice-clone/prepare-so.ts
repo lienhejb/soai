@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ttsWithTimestamps, type LineWithTiming } from '@/lib/elevenlabs/tts-with-timestamps';
 import { createHash } from 'crypto';
+import { getDateStringsForSo } from '@/lib/lunar';
 
 const STATIC_BUCKET = 'audio-static';
 const RENDERED_BUCKET = 'audio-rendered';
@@ -62,9 +63,10 @@ export async function prepareRenderedSo(
     .single();
 
   const vars = {
-    owner_name: profile?.display_name || 'Tín chủ',
-    address: profile?.address || 'Địa chỉ không rõ',
-  };
+  owner_name: profile?.display_name || 'Tín chủ',
+  address: profile?.address || 'Địa chỉ không rõ',
+  ...getDateStringsForSo(),
+};
   const variablesHash = hashVariables(vars);
 
   // Fetch segments TRƯỚC để tính fingerprint

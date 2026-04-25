@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
+import { getDateStringsForSo } from '@/lib/lunar';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,7 @@ export default async function SoDetailPage({ params }: PageProps) {
   const rendered = renderTemplate(fullText, {
     owner_name: profile?.display_name || '[Tín chủ]',
     address: profile?.address || '[Địa chỉ]',
+    ...getDateStringsForSo(),
   });
 
   // Fetch voices từ DB

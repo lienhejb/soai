@@ -5,21 +5,21 @@ import type { UserSo } from './_components/types';
 
 const MOCK_USER_SOS: UserSo[] = [
   {
-    user_so_id: 'khan-ram-hang-thang',
+    user_so_id: 'van-khan-ram',
     nickname: 'Sớ Rằm cầu an',
     event_type: 'RAM',
     is_default: true,
     updated_at: new Date().toISOString(),
   },
   {
-    user_so_id: 'khan-mung-mot-hang-thang',
+    user_so_id: 'van-khan-mung-1',
     nickname: 'Sớ Mùng 1',
     event_type: 'MONG',
     is_default: false,
     updated_at: new Date().toISOString(),
   },
   {
-    user_so_id: 'khan-gio-cha',
+    user_so_id: 'van-khan-gio',
     nickname: 'Sớ Giỗ Cha',
     event_type: 'GIO',
     is_default: false,

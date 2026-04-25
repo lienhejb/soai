@@ -131,7 +131,7 @@ export function computeUpcomingEvents(
       date_display: formatDual(ramDate),
       days_left: daysBetween(today, ramDate),
       is_hero: false,
-      target_slug: 'khan-ram-hang-thang',
+      target_slug: 'van-khan-ram',
     });
   }
 
@@ -145,7 +145,7 @@ export function computeUpcomingEvents(
       date_display: formatDual(mongDate),
       days_left: daysBetween(today, mongDate),
       is_hero: false,
-      target_slug: 'khan-mung-mot-hang-thang',
+      target_slug: 'van-khan-mung-1',
     });
   }
 
@@ -162,7 +162,7 @@ export function computeUpcomingEvents(
       date_display: formatDual(nextGio),
       days_left: daysBetween(today, nextGio),
       is_hero: false,
-      target_slug: 'khan-gio-cha',
+      target_slug: 'van-khan-gio',
     });
   }
 
@@ -299,4 +299,35 @@ export function isSameDay(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+/**
+ * Format ngày dương → "ngày 25 tháng 4 năm 2026"
+ * Dùng cho biến {{solar_date_full}} trong template
+ */
+export function getSolarDateFullString(date: Date = new Date()): string {
+  const d = date.getDate();
+  const m = date.getMonth() + 1;
+  const y = date.getFullYear();
+  return `ngày ${d} tháng ${m} năm ${y}`;
+}
+
+/**
+ * Helper gộp: trả về cả solar + lunar full string cùng lúc
+ * Dùng để inject vào vars khi render template
+ *
+ * Ví dụ output:
+ * {
+ *   solar_date_full: "ngày 25 tháng 4 năm 2026",
+ *   lunar_date_full: "ngày mùng Tám tháng Ba năm Bính Ngọ"
+ * }
+ */
+export function getDateStringsForSo(date: Date = new Date()): {
+  solar_date_full: string;
+  lunar_date_full: string;
+} {
+  return {
+    solar_date_full: getSolarDateFullString(date),
+    lunar_date_full: getLunarDateFullString(date),
+  };
 }
