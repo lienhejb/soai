@@ -51,6 +51,67 @@ interface PersonInput {
   is_leap_month_death: boolean;
 }
 
+/**
+ * Format ngày dương → chuỗi âm lịch đầy đủ tự nhiên cho văn khấn TTS
+ * Ví dụ: "ngày Rằm tháng Giêng năm Bính Ngọ"
+ *        "ngày mùng Một tháng Bảy năm Giáp Thìn"
+ *        "ngày mùng Tám tháng Chạp năm Quý Mão"
+ */
+export function getLunarDateFullString(date: Date = new Date()): string {
+  const lunar = Solar.fromDate(date).getLunar();
+  const day = lunar.getDay();
+  const month = lunar.getMonth();
+  const yearGanZhi = lunar.getYearInGanZhi();
+
+  return `ngày ${formatLunarDay(day)} tháng ${formatLunarMonth(month)} năm ${yearGanZhi}`;
+}
+
+/**
+ * Format ngày âm thành chữ tự nhiên cho TTS
+ * 1 → "mùng Một", 5 → "mùng Năm", 10 → "mùng Mười"
+ * 11 → "mười Một", 15 → "Rằm", 20 → "hai mươi"
+ * 21 → "hai mươi mốt", 30 → "ba mươi"
+ */
+function formatLunarDay(day: number): string {
+  if (day === 15) return 'Rằm';
+
+  const digits = ['', 'Một', 'Hai', 'Ba', 'Bốn', 'Năm', 'Sáu', 'Bảy', 'Tám', 'Chín'];
+
+  if (day >= 1 && day <= 10) {
+    return day === 10 ? 'mùng Mười' : `mùng ${digits[day]}`;
+  }
+  if (day === 11) return 'mười Một';
+  if (day >= 12 && day <= 19) return `mười ${digits[day - 10]}`;
+  if (day === 20) return 'hai mươi';
+  if (day === 21) return 'hai mươi mốt';
+  if (day >= 22 && day <= 29) return `hai mươi ${digits[day - 20]}`;
+  if (day === 30) return 'ba mươi';
+
+  return String(day); // fallback
+}
+
+/**
+ * Format tháng âm: dùng tên cổ truyền cho tháng 1 (Giêng), 11 (Một?), 12 (Chạp)
+ * Tháng còn lại đọc số.
+ */
+function formatLunarMonth(month: number): string {
+  const monthNames: Record<number, string> = {
+    1: 'Giêng',
+    2: 'Hai',
+    3: 'Ba',
+    4: 'Tư',
+    5: 'Năm',
+    6: 'Sáu',
+    7: 'Bảy',
+    8: 'Tám',
+    9: 'Chín',
+    10: 'Mười',
+    11: 'Mười Một',
+    12: 'Chạp',
+  };
+  return monthNames[month] ?? String(month);
+}
+
 export function computeUpcomingEvents(
   people: PersonInput[],
   withinDays: number = 30,
