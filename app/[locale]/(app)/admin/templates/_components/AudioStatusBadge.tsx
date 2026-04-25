@@ -50,3 +50,20 @@ export function AudioStatusBadge({ status }: Props) {
     </span>
   );
 }
+
+interface ListProps {
+  statuses: VoiceAudioStatus[];
+}
+
+export function AudioStatusList({ statuses }: ListProps) {
+  if (statuses.length === 0) {
+    return <span className="text-xs text-stone-400">Chưa có voice</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {statuses.map((s) => (
+        <AudioStatusBadge key={s.voice_key} status={s} />
+      ))}
+    </div>
+  );
+}
