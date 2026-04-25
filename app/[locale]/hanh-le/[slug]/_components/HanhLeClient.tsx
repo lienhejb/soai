@@ -12,7 +12,10 @@ import type { FlatLine } from './useKaraokeSync';
 
 export interface RenderedSoData {
   title: string;
-  audioUrl: string;
+  segments: Array<{
+    audio_url: string;
+    duration_ms: number;
+  }>;
   durationMs: number;
   voiceKey: string;
   lines: Array<{
@@ -40,6 +43,7 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
   const [autoAlternate, setAutoAlternate] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
+  const [currentSegmentIdx, setCurrentSegmentIdx] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const { volumes, setVolume, backgroundSounds } = useBackgroundSounds({
@@ -48,26 +52,39 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
   });
   const rafRef = useRef<number | null>(null);
 
+  // Tính cumulative offset của từng segment để track currentMs global
+  const segmentOffsetsMs = (() => {
+    const offsets: number[] = [];
+    let cum = 0;
+    for (const s of data.segments) {
+      offsets.push(cum);
+      cum += s.duration_ms;
+    }
+    return offsets;
+  })();
+
   // Convert lines → FlatLine[]
   const flatLines: FlatLine[] = data.lines.map((l, i) => ({
-  line_id: l.line_id || `l${i}`,
-  text: l.text,
-  start_ms: l.start_ms,
-  end_ms: l.end_ms,
-  global_start_ms: l.start_ms,
-  global_end_ms: l.end_ms,
-  segment_id: l.segment_id ?? '',
-  segment_type: 'STATIC' as const,
-}));
+    line_id: l.line_id || `l${i}`,
+    text: l.text,
+    start_ms: l.start_ms,
+    end_ms: l.end_ms,
+    global_start_ms: l.start_ms,
+    global_end_ms: l.end_ms,
+    segment_id: l.segment_id ?? '',
+    segment_type: 'STATIC' as const,
+  }));
 
   const activeIndex = findActiveIndex(flatLines, currentMs);
   const currentLine = flatLines[activeIndex] ?? null;
 
-  // Track audio time mượt hơn bằng rAF
+  // Track audio time mượt hơn bằng rAF — cộng dồn offset segment
   useEffect(() => {
     function tick() {
       if (audioRef.current) {
-        setCurrentMs(audioRef.current.currentTime * 1000);
+        const localMs = audioRef.current.currentTime * 1000;
+        const offset = segmentOffsetsMs[currentSegmentIdx] ?? 0;
+        setCurrentMs(localMs + offset);
       }
       rafRef.current = requestAnimationFrame(tick);
     }
@@ -80,7 +97,8 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [isPlaying]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, currentSegmentIdx]);
 
   // Auto alternate mode
   const lastSwitchRef = useRef(0);
@@ -112,8 +130,53 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
 
   function seek(ms: number) {
     if (!audioRef.current) return;
-    audioRef.current.currentTime = ms / 1000;
-    setCurrentMs(ms);
+
+    // Tìm segment chứa ms này
+    let targetIdx = 0;
+    for (let i = 0; i < data.segments.length; i++) {
+      const start = segmentOffsetsMs[i];
+      const end = start + data.segments[i].duration_ms;
+      if (ms >= start && ms < end) {
+        targetIdx = i;
+        break;
+      }
+      if (i === data.segments.length - 1) targetIdx = i; // clamp end
+    }
+
+    const localMs = ms - segmentOffsetsMs[targetIdx];
+    const wasPlaying = isPlaying;
+
+    if (targetIdx !== currentSegmentIdx) {
+      // Đổi segment — đợi src load xong rồi set time
+      setCurrentSegmentIdx(targetIdx);
+      setCurrentMs(ms);
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.currentTime = localMs / 1000;
+          if (wasPlaying) audioRef.current.play().catch(() => {});
+        }
+      }, 100);
+    } else {
+      audioRef.current.currentTime = localMs / 1000;
+      setCurrentMs(ms);
+    }
+  }
+
+  function handleSegmentEnded() {
+    const nextIdx = currentSegmentIdx + 1;
+    if (nextIdx < data.segments.length) {
+      setCurrentSegmentIdx(nextIdx);
+      // Đợi src đổi xong rồi auto-play
+      setTimeout(() => {
+        audioRef.current?.play().catch((e) => {
+          console.warn('[hanh-le] auto-play next segment fail:', e);
+        });
+      }, 50);
+    } else {
+      // Hết toàn bộ
+      setIsPlaying(false);
+      setCurrentSegmentIdx(0);
+    }
   }
 
   function handleClose() {
@@ -131,11 +194,11 @@ export function HanhLeClient({ data }: { data: RenderedSoData }) {
     >
       <audio
         ref={audioRef}
-        src={data.audioUrl}
+        src={data.segments[currentSegmentIdx]?.audio_url}
         preload="auto"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={handleSegmentEnded}
       />
 
       {/* Header */}

@@ -1,16 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { createHash } from 'crypto';
+import { prepareRenderedSo } from '@/lib/voice-clone/prepare-so';
 import { HanhLeClient, type RenderedSoData } from './_components/HanhLeClient';
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ voice?: string }>;
 }
 
 export const dynamic = 'force-dynamic';
 
-export default async function HanhLePage({ params }: PageProps) {
+export default async function HanhLePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { voice } = await searchParams;
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -25,75 +27,97 @@ export default async function HanhLePage({ params }: PageProps) {
 
   if (!template) redirect('/vi/so');
 
-  // Fetch segments để tính fingerprint hiện tại
-  const { data: segments } = await supabase
-    .from('template_segments')
-    .select('id, order_index, text')
-    .eq('template_id', template.id)
-    .order('order_index');
+  // Resolve voice: ưu tiên ?voice= từ query, fallback voice mặc định theo gender
+  let voiceKey = voice;
+  let voiceProviderId: string | null = null;
 
-  if (!segments || segments.length === 0) {
-    redirect(`/vi/so/${slug}`);
+  if (voiceKey) {
+    const { data: vRow } = await supabase
+      .from('system_voices')
+      .select('voice_key, provider_voice_id')
+      .eq('voice_key', voiceKey)
+      .eq('is_active', true)
+      .maybeSingle();
+    voiceProviderId = vRow?.provider_voice_id ?? null;
   }
 
-  // Fetch profile để tính variables_hash
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, address')
-    .eq('id', user.id)
-    .single();
+  if (!voiceProviderId) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('gender')
+      .eq('id', user.id)
+      .single();
 
-  const vars = {
-    owner_name: profile?.display_name || 'Tín chủ',
-    address: profile?.address || 'Địa chỉ không rõ',
-  };
-  const variablesHash = hashText(
-    Object.keys(vars).sort().map((k) => `${k}=${vars[k as keyof typeof vars]}`).join('|')
-  );
+    const { data: voices } = await supabase
+      .from('system_voices')
+      .select('voice_key, provider_voice_id, gender')
+      .eq('is_active', true)
+      .order('sort_order');
 
-  // Lấy record mới nhất MỌI voice của user + template + variables
-  const { data: rendered } = await supabase
-    .from('user_rendered_audio')
-    .select('merged_audio_url, lines_with_timing, duration_ms, voice_key, segments_fingerprint')
-    .eq('user_id', user.id)
-    .eq('template_id', template.id)
-    .eq('variables_hash', variablesHash)
-    .order('last_accessed_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    const fallback = voices?.find((v) =>
+      v.gender === (profile?.gender === 'female' ? 'female' : 'male')
+    ) ?? voices?.[0];
 
-  if (!rendered?.merged_audio_url) {
-    redirect(`/vi/so/${slug}`);
+    if (!fallback?.provider_voice_id) redirect(`/vi/so/${slug}`);
+    voiceKey = fallback.voice_key;
+    voiceProviderId = fallback.provider_voice_id;
   }
 
-  // Validate fingerprint với voice_key record
-  const segmentHashes = segments.map((s) => hashText(s.text));
-  const expectedFingerprint = hashText(
-    [rendered.voice_key, variablesHash, ...segmentHashes].join('|')
-  );
+  // Gọi prepareRenderedSo — đã warm cache từ trang sớ rồi nên đa số là cache hit
+  const res = await prepareRenderedSo(slug, voiceKey!, voiceProviderId);
 
-  // Fingerprint mismatch → template đã đổi → redirect về trang sớ để render lại
-  if (rendered.segments_fingerprint !== expectedFingerprint) {
-    redirect(`/vi/so/${slug}?stale=1`);
+  if (!res.ok) {
+    console.error('[hanh-le] prepare error:', res.error);
+    redirect(`/vi/so/${slug}?error=prepare`);
+  }
+
+  // Build segments[] cho client
+  let segments: RenderedSoData['segments'];
+  let totalDurationMs: number;
+  let allLines: RenderedSoData['lines'];
+
+  if (res.cached) {
+    // Cache hit — chỉ có merged URL, không có segments riêng
+    // → Treat as single segment
+    segments = [{
+      audio_url: res.cached.merged_audio_url,
+      duration_ms: res.cached.duration_ms,
+    }];
+    totalDurationMs = res.cached.duration_ms;
+    allLines = (res.cached.lines_with_timing ?? []).map((l) => ({
+      line_id: l.line_id,
+      text: l.text,
+      start_ms: l.start_ms,
+      end_ms: l.end_ms,
+      segment_id: (l as { segment_id?: string }).segment_id,
+    }));
+  } else if (res.segments && res.finalize) {
+    // Cache miss — segments riêng lẻ
+    segments = res.segments
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((s) => ({
+        audio_url: s.audio_url,
+        duration_ms: s.duration_ms,
+      }));
+    totalDurationMs = res.finalize.total_duration_ms;
+    allLines = res.finalize.global_lines.map((l) => ({
+      line_id: l.line_id,
+      text: l.text,
+      start_ms: l.start_ms,
+      end_ms: l.end_ms,
+      segment_id: l.segment_id,
+    }));
+  } else {
+    redirect(`/vi/so/${slug}`);
   }
 
   const data: RenderedSoData = {
     title: template.title,
-    audioUrl: rendered.merged_audio_url,
-    durationMs: rendered.duration_ms ?? 0,
-    voiceKey: rendered.voice_key,
-    lines: (rendered.lines_with_timing ?? []) as Array<{
-      line_id: string;
-      text: string;
-      start_ms: number;
-      end_ms: number;
-      segment_id?: string;
-    }>,
+    segments,
+    durationMs: totalDurationMs,
+    voiceKey: voiceKey!,
+    lines: allLines,
   };
 
   return <HanhLeClient data={data} />;
-}
-
-function hashText(text: string): string {
-  return createHash('sha256').update(text).digest('hex');
 }
