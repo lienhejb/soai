@@ -5,6 +5,7 @@ import { FrequencyTabs, type FrequencyTab } from './FrequencyTabs';
 import { AudioStatusList } from './AudioStatusBadge';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { TemplateEditor } from './TemplateEditor';
+import { GenAudioModal } from './GenAudioModal';
 import {
   deleteTemplate,
   getTemplate,
@@ -13,11 +14,18 @@ import {
 } from '@/lib/admin/template-actions';
 import { useRouter } from 'next/navigation';
 
-interface Props {
-  initialTemplates: TemplateListItem[];
+interface VoiceMeta {
+  voice_key: string;
+  voice_label: string;
+  provider_voice_id: string;
 }
 
-export function TemplateList({ initialTemplates }: Props) {
+interface Props {
+  initialTemplates: TemplateListItem[];
+  voicesMeta: VoiceMeta[];
+}
+
+export function TemplateList({ initialTemplates, voicesMeta }: Props) {
   const router = useRouter();
 
   const [search, setSearch] = useState('');
@@ -30,6 +38,9 @@ export function TemplateList({ initialTemplates }: Props) {
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<TemplateListItem | null>(null);
+
+  // Gen audio state
+  const [genTarget, setGenTarget] = useState<TemplateListItem | null>(null);
 
   // Filter + search
   const filtered = useMemo(() => {
@@ -156,9 +167,15 @@ export function TemplateList({ initialTemplates }: Props) {
                   <td className="px-4 py-3 text-stone-600">{t.segment_count}</td>
                   <td className="px-4 py-3 text-right">
                     <button
+                      onClick={() => setGenTarget(t)}
+                      className="rounded px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                    >
+                      Gen
+                    </button>
+                    <button
                       onClick={() => handleEdit(t)}
                       disabled={loadingEdit}
-                      className="rounded px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-50"
+                      className="ml-1 rounded px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-50"
                     >
                       Sửa
                     </button>
@@ -192,15 +209,28 @@ export function TemplateList({ initialTemplates }: Props) {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
       />
+
+      {/* Gen audio */}
+      <GenAudioModal
+        open={genTarget !== null}
+        template={genTarget}
+        voicesMeta={voicesMeta}
+        onClose={() => setGenTarget(null)}
+        onDone={() => router.refresh()}
+      />
     </>
   );
 }
 
 function frequencyLabel(f: string): string {
   switch (f) {
-    case 'monthly': return 'Định kỳ';
-    case 'yearly': return 'Thường niên';
-    case 'rare': return 'Hiếm';
-    default: return 'Khác';
+    case 'monthly':
+      return 'Định kỳ';
+    case 'yearly':
+      return 'Thường niên';
+    case 'rare':
+      return 'Hiếm';
+    default:
+      return 'Khác';
   }
 }

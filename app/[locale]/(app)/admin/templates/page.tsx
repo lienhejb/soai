@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { listTemplatesWithStatus } from '@/lib/admin/template-actions';
+import { createClient } from '@/lib/supabase/server';
 import { TemplateList } from './_components/TemplateList';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,20 @@ export default async function AdminTemplatesPage() {
     );
   }
 
+  // Fetch voices meta để Modal Gen Audio biết provider_voice_id
+  const supabase = await createClient();
+  const { data: voices } = await supabase
+    .from('system_voices')
+    .select('voice_key, display_name, provider_voice_id')
+    .eq('is_active', true)
+    .order('sort_order');
+
+  const voicesMeta = (voices ?? []).map((v) => ({
+    voice_key: v.voice_key,
+    voice_label: v.display_name,
+    provider_voice_id: v.provider_voice_id,
+  }));
+
   return (
     <main className="min-h-screen bg-stone-50/50 px-6 py-10">
       <div className="mx-auto max-w-6xl">
@@ -34,7 +49,7 @@ export default async function AdminTemplatesPage() {
           </p>
         </header>
 
-        <TemplateList initialTemplates={res.data ?? []} />
+        <TemplateList initialTemplates={res.data ?? []} voicesMeta={voicesMeta} />
       </div>
     </main>
   );

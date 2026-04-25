@@ -6,9 +6,14 @@
 
 export type VariableType = 'text' | 'date' | 'number' | 'select';
 
-export type AutoFromProfile = 'display_name' | 'address' | 'birth_year' | 'gender';
+export type AutoFromProfile = 
+  | 'display_name' 
+  | 'address' 
+  | 'birth_year' 
+  | 'gender'
+  | 'display_name_first_word';
 
-export type AutoCompute = 'lunar_full' | 'lunar_date_from_solar';
+export type AutoCompute = 'lunar_full' | 'lunar_date_from_solar' | 'solar_full';
 
 export interface RequiredVariable {
   /** Key trong template, dùng cho substitution {{key}}. snake_case. */
@@ -69,6 +74,16 @@ export const PRESET_VARIABLES: RequiredVariable[] = [
     auto_from_profile: 'address',
     helper_text: 'Tự lấy từ profile của user',
   },
+  // Họ gia đình — user nhập 1 lần, lưu profile
+  {
+    key: 'family_surname',
+    label: 'Họ gia đình',
+    type: 'text',
+    required: false,
+    auto_from_profile: 'display_name_first_word',
+    placeholder: 'VD: Nguyễn, Trần, Lê',
+    helper_text: 'Tự lấy từ chữ đầu của tên gia chủ. VD: "Nguyễn Văn A" → họ "Nguyễn"',
+  },
   {
     key: 'owner_birth_year',
     label: 'Năm sinh gia chủ',
@@ -85,6 +100,14 @@ export const PRESET_VARIABLES: RequiredVariable[] = [
     required: true,
     auto_compute: 'lunar_full',
     helper_text: 'Tự động: "ngày Rằm tháng Giêng năm Bính Ngọ" — từ ngày user chọn làm lễ',
+  },
+  {
+    key: 'solar_date_full',
+    label: 'Ngày dương lịch đầy đủ',
+    type: 'text',
+    required: false,
+    auto_compute: 'solar_full',
+    helper_text: 'Tự động: "ngày 25 tháng 4 năm 2026" — từ ngày user chọn làm lễ',
   },
 
   // === Auto default ===
