@@ -254,3 +254,49 @@ function computeNextAnniversary(
   }
   return null;
 }
+
+/**
+ * Lấy danh sách solar dates ứng với 1 ngày âm cụ thể trong N tháng tới
+ * Ví dụ: getNextLunarOccurrences(15, 3) → 3 ngày Rằm sắp tới (tháng này + 2 tháng sau)
+ */
+export function getNextLunarOccurrences(
+  lunarDay: number,
+  monthsAhead: number = 3,
+  from: Date = new Date()
+): Date[] {
+  const results: Date[] = [];
+  let cur = startOfDay(from);
+  const maxMs = cur.getTime() + monthsAhead * 31 * 86400000;
+
+  while (cur.getTime() <= maxMs && results.length < monthsAhead + 1) {
+    const lunar = Solar.fromDate(cur).getLunar();
+    if (lunar.getDay() === lunarDay) {
+      results.push(new Date(cur));
+      // Nhảy ~25 ngày để qua tháng âm tiếp theo
+      cur = new Date(cur.getTime() + 25 * 86400000);
+    } else {
+      cur = new Date(cur.getTime() + 86400000);
+    }
+  }
+  return results;
+}
+
+/**
+ * Format Date thành "31/05/2026"
+ */
+export function formatSolarShort(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+/**
+ * Check 2 Date có cùng ngày không (so sánh y/m/d, bỏ qua giờ)
+ */
+export function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
