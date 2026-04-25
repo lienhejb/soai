@@ -3,7 +3,7 @@ import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
 
-export const dynamic = 'force-dynamic';   // ← THÊM DÒNG NÀY
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -15,10 +15,19 @@ export default async function SoDetailPage({ params }: PageProps) {
 
   const { data: template } = await supabase
     .from('templates')
-    .select('id, title, content')
+    .select(`
+      id,
+      title,
+      template_segments (
+        order_index,
+        segment_type,
+        text
+      )
+    `)
     .eq('slug', slug)
     .eq('locale', 'vi')
     .eq('is_active', true)
+    .order('order_index', { foreignTable: 'template_segments' })
     .single();
 
   if (!template) notFound();
@@ -30,33 +39,37 @@ export default async function SoDetailPage({ params }: PageProps) {
     .eq('id', user!.id)
     .single();
 
-  const rendered = renderTemplate(template.content, {
+  const fullText = (template.template_segments ?? [])
+    .map((s) => s.text)
+    .join('\n\n');
+
+  const rendered = renderTemplate(fullText, {
     owner_name: profile?.display_name || '[Tín chủ]',
     address: profile?.address || '[Địa chỉ]',
   });
 
   // Fetch voices từ DB
-const { data: systemVoices } = await supabase
-  .from('system_voices')
-  .select('voice_key, display_name, description, gender, provider_voice_id')
-  .eq('is_active', true)
-  .order('sort_order');
+  const { data: systemVoices } = await supabase
+    .from('system_voices')
+    .select('voice_key, display_name, description, gender, provider_voice_id')
+    .eq('is_active', true)
+    .order('sort_order');
 
-const availableVoices = (systemVoices ?? [])
-  .filter((v) => v.provider_voice_id)
-  .map((v) => ({
-    id: v.provider_voice_id as string,
-    voice_key: v.voice_key,    // ← THÊM
-    label: v.display_name,
-    gender: v.gender as 'male' | 'female',
-    type: 'system' as const,
-  }));
+  const availableVoices = (systemVoices ?? [])
+    .filter((v) => v.provider_voice_id)
+    .map((v) => ({
+      id: v.provider_voice_id as string,
+      voice_key: v.voice_key,
+      label: v.display_name,
+      gender: v.gender as 'male' | 'female',
+      type: 'system' as const,
+    }));
 
-const defaultVoice = availableVoices.find((v) => 
-  v.gender === (profile?.gender === 'female' ? 'female' : 'male')
-) ?? availableVoices[0];
+  const defaultVoice = availableVoices.find((v) =>
+    v.gender === (profile?.gender === 'female' ? 'female' : 'male')
+  ) ?? availableVoices[0];
 
-const defaultVoiceId = defaultVoice?.id ?? '';
+  const defaultVoiceId = defaultVoice?.id ?? '';
 
   return (
     <div className="px-5 pt-6 pb-24">

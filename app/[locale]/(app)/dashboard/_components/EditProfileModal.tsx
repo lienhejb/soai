@@ -46,6 +46,17 @@ export function EditProfileModal({ open, onClose, initial, onSaved }: Props) {
     e.preventDefault();
     setError(null);
     setSaving(true);
+    // Validation strict
+if (!displayName.trim()) {
+  setError('Vui lòng nhập họ tên');
+  setSaving(false);
+  return;
+}
+if (!address.trim()) {
+  setError('Vui lòng nhập địa chỉ');
+  setSaving(false);
+  return;
+}
 
     const yearNum = birthYear ? parseInt(birthYear, 10) : null;
     if (yearNum && (yearNum < 1920 || yearNum > new Date().getFullYear())) {
@@ -100,19 +111,25 @@ export function EditProfileModal({ open, onClose, initial, onSaved }: Props) {
 
         <form onSubmit={handleSave} className="space-y-5">
           {/* Họ tên */}
-          <label className="block">
-            <span className="mb-1.5 block font-serif text-sm font-medium text-stone-800">
-              Họ tên Gia Chủ
-            </span>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Ví dụ: Nguyễn Văn A"
-              required
-              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-stone-800 placeholder:text-stone-400 shadow-inner transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-            />
-          </label>
+<label className="block">
+  <span className="mb-1.5 block font-serif text-sm font-medium text-stone-800">
+    Họ tên Gia Chủ <span className="text-rose-500">*</span>
+  </span>
+  <input
+    type="text"
+    value={displayName}
+    onChange={(e) => setDisplayName(e.target.value)}
+    placeholder="Ví dụ: Nguyễn Văn A"
+    required
+    className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-stone-800 placeholder:text-stone-400 shadow-inner transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+  />
+  {displayName.trim() && (
+    <p className="mt-1.5 text-xs text-stone-500">
+      Họ trong văn khấn: <span className="font-medium text-amber-700">{displayName.trim().split(/\s+/)[0]}</span>
+      <span className="ml-1 text-stone-400">(tự động lấy chữ đầu)</span>
+    </p>
+  )}
+</label>
 
           {/* Giới tính */}
           <div>
@@ -164,8 +181,8 @@ export function EditProfileModal({ open, onClose, initial, onSaved }: Props) {
           {/* Địa chỉ */}
           <label className="block">
             <span className="mb-1.5 block font-serif text-sm font-medium text-stone-800">
-              Địa chỉ cư trú
-            </span>
+  Địa chỉ cư trú <span className="text-rose-500">*</span>
+</span>
             <input
               type="text"
               value={address}
