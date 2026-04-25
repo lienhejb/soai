@@ -7,7 +7,7 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-const PROTECTED_PATHS = ['/dashboard', '/calendar', '/so', '/voice', '/profile', '/admin'];
+const PROTECTED_PATHS = ['/dashboard', '/calendar', '/voice', '/profile', '/admin'];
 
 function stripLocale(pathname: string): { locale: string; path: string } {
   const segments = pathname.split('/').filter(Boolean);
