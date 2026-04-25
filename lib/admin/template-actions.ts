@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { splitTemplate, findStaleSegmentIndices, extractVariableKeys } from './split-template';
+import { extractVariableKeys, findStaleSegmentIndices, hashText } from './split-template';
 import type { RequiredVariable } from './preset-variables';
 import { revalidatePath } from 'next/cache';
 
@@ -12,13 +12,18 @@ const STATIC_BUCKET = 'audio-static';
 
 export type Frequency = 'monthly' | 'yearly' | 'rare' | 'other';
 
+export interface TemplateBlock {
+  segment_type: 'static' | 'dynamic';
+  text: string;
+}
+
 export interface TemplateInput {
   title: string;
   slug: string;
-  category: string;          // free-text, vd "Gia tiên", "Thần tài"
-  purpose?: string;           // optional, legacy
+  category: string;
+  purpose?: string;
   frequency: Frequency;
-  content: string;
+  blocks: TemplateBlock[];
   required_variables: RequiredVariable[];
   is_featured?: boolean;
 }
@@ -38,9 +43,21 @@ export interface TemplateListItem {
 export interface VoiceAudioStatus {
   voice_key: string;
   voice_label: string;
-  ready_count: number;       // segments static có audio
-  total_static: number;      // tổng segments static template này
-  is_complete: boolean;       // ready_count === total_static
+  ready_count: number;
+  total_static: number;
+  is_complete: boolean;
+}
+
+export interface TemplateDetail {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  frequency: Frequency;
+  blocks: TemplateBlock[];
+  required_variables: RequiredVariable[];
+  is_active: boolean;
+  is_featured: boolean;
 }
 
 export interface ActionResult<T = void> {
@@ -71,16 +88,11 @@ async function requireAdmin() {
 
 // ============ LIST ============
 
-/**
- * Lấy danh sách templates kèm audio status per voice.
- * Dùng cho trang admin list.
- */
 export async function listTemplatesWithStatus(): Promise<ActionResult<TemplateListItem[]>> {
   const auth = await requireAdmin();
   if (!auth.ok || !auth.supabase) return { ok: false, error: auth.error };
   const supabase = auth.supabase;
 
-  // Fetch templates
   const { data: templates, error: tErr } = await supabase
     .from('templates')
     .select('id, slug, title, category, frequency, is_active, is_featured')
@@ -90,7 +102,6 @@ export async function listTemplatesWithStatus(): Promise<ActionResult<TemplateLi
   if (tErr) return { ok: false, error: tErr.message };
   if (!templates || templates.length === 0) return { ok: true, data: [] };
 
-  // Fetch all system_voices (active)
   const { data: voices } = await supabase
     .from('system_voices')
     .select('voice_key, display_name')
@@ -99,21 +110,20 @@ export async function listTemplatesWithStatus(): Promise<ActionResult<TemplateLi
 
   const voiceList = voices ?? [];
 
-  // Fetch all segments (count static per template)
   const templateIds = templates.map((t) => t.id);
   const { data: segments } = await supabase
     .from('template_segments')
     .select('id, template_id, segment_type')
     .in('template_id', templateIds);
 
-  // Fetch all static_audio for these segments
   const segmentIds = (segments ?? []).map((s) => s.id);
-  const { data: audioRows } = await supabase
-    .from('static_audio')
-    .select('segment_id, voice_key')
-    .in('segment_id', segmentIds);
+  const { data: audioRows } = segmentIds.length > 0
+    ? await supabase
+        .from('static_audio')
+        .select('segment_id, voice_key')
+        .in('segment_id', segmentIds)
+    : { data: [] };
 
-  // Compute status per template
   const result: TemplateListItem[] = templates.map((tmpl) => {
     const tmplSegments = (segments ?? []).filter((s) => s.template_id === tmpl.id);
     const staticSegIds = tmplSegments.filter((s) => s.segment_type === 'static').map((s) => s.id);
@@ -149,29 +159,6 @@ export async function listTemplatesWithStatus(): Promise<ActionResult<TemplateLi
 
 // ============ GET ONE ============
 
-export interface TemplateDetail {
-  id: string;
-  slug: string;
-  title: string;
-  category: string;
-  frequency: Frequency;
-  content: string;            // composed lại từ segments
-  required_variables: RequiredVariable[];
-  is_active: boolean;
-  is_featured: boolean;
-  segments: Array<{
-    id: string;
-    order_index: number;
-    segment_type: 'static' | 'dynamic';
-    text: string;
-    text_hash: string;
-  }>;
-}
-
-/**
- * Lấy chi tiết 1 template (cho form edit).
- * Compose lại `content` từ segments để admin edit ở 1 textarea.
- */
 export async function getTemplate(id: string): Promise<ActionResult<TemplateDetail>> {
   const auth = await requireAdmin();
   if (!auth.ok || !auth.supabase) return { ok: false, error: auth.error };
@@ -193,10 +180,10 @@ export async function getTemplate(id: string): Promise<ActionResult<TemplateDeta
 
   if (sErr) return { ok: false, error: sErr.message };
 
-  // Compose content = nối các segment.text theo order_index, ngăn cách " " (space)
-  const content = (segments ?? [])
-    .map((s) => s.text)
-    .join(' ');
+  const blocks: TemplateBlock[] = (segments ?? []).map((s) => ({
+    segment_type: s.segment_type as 'static' | 'dynamic',
+    text: s.text,
+  }));
 
   return {
     ok: true,
@@ -206,32 +193,21 @@ export async function getTemplate(id: string): Promise<ActionResult<TemplateDeta
       title: tmpl.title,
       category: tmpl.category,
       frequency: tmpl.frequency as Frequency,
-      content,
+      blocks,
       required_variables: (tmpl.required_variables ?? []) as RequiredVariable[],
       is_active: tmpl.is_active,
       is_featured: tmpl.is_featured,
-      segments: (segments ?? []).map((s) => ({
-        id: s.id,
-        order_index: s.order_index,
-        segment_type: s.segment_type as 'static' | 'dynamic',
-        text: s.text,
-        text_hash: s.text_hash,
-      })),
     },
   };
 }
 
 // ============ CREATE ============
 
-/**
- * Tạo template mới + auto-split content thành segments.
- */
 export async function createTemplate(input: TemplateInput): Promise<ActionResult<{ id: string }>> {
   const auth = await requireAdmin();
   if (!auth.ok || !auth.supabase || !auth.user) return { ok: false, error: auth.error };
   const supabase = auth.supabase;
 
-  // Validate
   const validation = validateInput(input);
   if (!validation.ok) return { ok: false, error: validation.error };
 
@@ -245,6 +221,9 @@ export async function createTemplate(input: TemplateInput): Promise<ActionResult
 
   if (existing) return { ok: false, error: `Slug "${input.slug}" đã tồn tại` };
 
+  // Compose content cho legacy /api/tts (flow NGHE)
+  const composedContent = input.blocks.map((b) => b.text).join(' ');
+
   // Insert template
   const { data: tmpl, error: tErr } = await supabase
     .from('templates')
@@ -255,7 +234,7 @@ export async function createTemplate(input: TemplateInput): Promise<ActionResult
       category: input.category,
       purpose: input.purpose ?? null,
       frequency: input.frequency,
-      content: input.content,        // lưu raw content cho legacy /api/tts
+      content: composedContent,
       required_variables: input.required_variables,
       is_featured: input.is_featured ?? false,
       is_active: true,
@@ -266,21 +245,14 @@ export async function createTemplate(input: TemplateInput): Promise<ActionResult
 
   if (tErr || !tmpl) return { ok: false, error: tErr?.message ?? 'Tạo template thất bại' };
 
-  // Auto-split + insert segments
-  const splitResult = splitTemplate(input.content);
-  if (splitResult.length === 0) {
-    // Rollback template (xóa)
-    await supabase.from('templates').delete().eq('id', tmpl.id);
-    return { ok: false, error: 'Content rỗng hoặc không tách được segment' };
-  }
-
-  const segmentRows = splitResult.map((s) => ({
+  // Insert segments — 1 block = 1 segment, KHÔNG auto-split
+  const segmentRows = input.blocks.map((b, idx) => ({
     template_id: tmpl.id,
-    order_index: s.order_index,
-    segment_type: s.segment_type,
-    text: s.text,
-    text_hash: s.text_hash,
-    required_variables: extractVariableKeys(s.text),
+    order_index: idx + 1,
+    segment_type: b.segment_type,
+    text: b.text.trim(),
+    text_hash: hashText(b.text.trim()),
+    required_variables: extractVariableKeys(b.text),
   }));
 
   const { error: sErr } = await supabase.from('template_segments').insert(segmentRows);
@@ -295,25 +267,26 @@ export async function createTemplate(input: TemplateInput): Promise<ActionResult
 
 // ============ UPDATE ============
 
-/**
- * Update template với smart diff:
- * - So sánh segments cũ vs mới (text_hash)
- * - Nếu count khác → nuke + rebuild
- * - Nếu count match → chỉ update segments stale
- * - Stale segments → xóa static_audio cũ (regen sau qua admin gen)
- */
 export async function updateTemplate(
   id: string,
   input: TemplateInput
 ): Promise<ActionResult<{ stale_segments: number[] }>> {
   const auth = await requireAdmin();
-  if (!auth.ok || !auth.supabase) return { ok: false, error: auth.error };
+  if (!auth.ok || !auth.supabase || !auth.user) return { ok: false, error: auth.error };
   const supabase = auth.supabase;
 
   const validation = validateInput(input);
   if (!validation.ok) return { ok: false, error: validation.error };
 
-  // Fetch segments cũ
+  // Fetch slug + segments cũ
+  const { data: oldTmpl } = await supabase
+    .from('templates')
+    .select('slug')
+    .eq('id', id)
+    .single();
+
+  if (!oldTmpl) return { ok: false, error: 'Template không tồn tại' };
+
   const { data: oldSegments } = await supabase
     .from('template_segments')
     .select('id, order_index, segment_type, text, text_hash')
@@ -322,21 +295,53 @@ export async function updateTemplate(
 
   if (!oldSegments) return { ok: false, error: 'Không tìm thấy segments cũ' };
 
-  // Split content mới
-  const newSegments = splitTemplate(input.content);
+  // Convert blocks → newSegments shape
+  const newSegments = input.blocks.map((b, idx) => ({
+    order_index: idx + 1,
+    segment_type: b.segment_type,
+    text: b.text.trim(),
+    text_hash: hashText(b.text.trim()),
+  }));
+
   if (newSegments.length === 0) {
-    return { ok: false, error: 'Content rỗng hoặc không tách được segment' };
+    return { ok: false, error: 'Thiếu nội dung — cần ít nhất 1 block' };
   }
 
-  // Update template metadata
+  // Slug check + log history
+  if (input.slug !== oldTmpl.slug) {
+    const { data: conflict } = await supabase
+      .from('templates')
+      .select('id')
+      .eq('slug', input.slug)
+      .eq('locale', 'vi')
+      .eq('is_active', true)
+      .neq('id', id)
+      .maybeSingle();
+
+    if (conflict) {
+      return { ok: false, error: `Slug "${input.slug}" đã được dùng bởi template khác` };
+    }
+
+    await supabase.from('template_slug_history').insert({
+      template_id: id,
+      old_slug: oldTmpl.slug,
+      new_slug: input.slug,
+      changed_by: auth.user.id,
+    });
+  }
+
+  // Compose content mới
+  const composedContent = input.blocks.map((b) => b.text).join(' ');
+
   const { error: tErr } = await supabase
     .from('templates')
     .update({
+      slug: input.slug,
       title: input.title,
       category: input.category,
       purpose: input.purpose ?? null,
       frequency: input.frequency,
-      content: input.content,
+      content: composedContent,
       required_variables: input.required_variables,
       is_featured: input.is_featured ?? false,
     })
@@ -349,30 +354,25 @@ export async function updateTemplate(
   let staleIndices: number[];
 
   if (countMatch) {
-    // Same count → diff theo order_index
     staleIndices = findStaleSegmentIndices(oldSegments, newSegments);
   } else {
-    // Count khác → nuke all (toàn bộ stale)
     staleIndices = newSegments.map((s) => s.order_index);
   }
 
   if (countMatch && staleIndices.length === 0) {
-    // Không có segment nào đổi → chỉ update metadata, segments giữ nguyên
     revalidatePath('/vi/admin/templates');
     return { ok: true, data: { stale_segments: [] } };
   }
 
-  // Xóa static_audio của các segment_id stale (nếu count match)
   if (countMatch) {
     const staleSegmentIds = oldSegments
       .filter((s) => staleIndices.includes(s.order_index))
       .map((s) => s.id);
 
     if (staleSegmentIds.length > 0) {
-  await deleteAllAudioForSegments(supabase, staleSegmentIds);
-}
+      await deleteAllAudioForSegments(supabase, staleSegmentIds);
+    }
 
-    // Update text + text_hash của các segment stale
     for (const newSeg of newSegments) {
       if (!staleIndices.includes(newSeg.order_index)) continue;
       const oldSeg = oldSegments.find((s) => s.order_index === newSeg.order_index);
@@ -408,7 +408,7 @@ export async function updateTemplate(
     if (insErr) return { ok: false, error: `Lỗi insert segments mới: ${insErr.message}` };
   }
 
-  // Invalidate user_rendered_audio của template này (vì segments fingerprint sẽ đổi)
+  // Invalidate user_rendered_audio
   await supabase.from('user_rendered_audio').delete().eq('template_id', id);
 
   revalidatePath('/vi/admin/templates');
@@ -417,10 +417,6 @@ export async function updateTemplate(
 
 // ============ DELETE ============
 
-/**
- * Soft delete: set is_active = false.
- * Hard delete (purge audio + segments) là action riêng để cẩn trọng.
- */
 export async function deleteTemplate(id: string): Promise<ActionResult> {
   const auth = await requireAdmin();
   if (!auth.ok || !auth.supabase) return { ok: false, error: auth.error };
@@ -445,13 +441,19 @@ function validateInput(input: TemplateInput): { ok: boolean; error?: string } {
   if (!/^[a-z0-9-]+$/.test(input.slug)) {
     return { ok: false, error: 'Slug chỉ chứa a-z, 0-9, dấu gạch ngang' };
   }
-  if (!input.content?.trim()) return { ok: false, error: 'Thiếu nội dung' };
+  if (!input.blocks || input.blocks.length === 0) {
+    return { ok: false, error: 'Thiếu nội dung — cần ít nhất 1 block' };
+  }
+  if (input.blocks.some((b) => !b.text.trim())) {
+    return { ok: false, error: 'Có block trống — vui lòng xóa hoặc nhập nội dung' };
+  }
   if (!['monthly', 'yearly', 'rare', 'other'].includes(input.frequency)) {
     return { ok: false, error: 'Frequency không hợp lệ' };
   }
 
-  // Check biến trong content phải khớp với required_variables declare
-  const contentVars = extractVariableKeys(input.content);
+  // Check biến trong tất cả blocks phải khớp với required_variables declare
+  const allText = input.blocks.map((b) => b.text).join(' ');
+  const contentVars = extractVariableKeys(allText);
   const declaredKeys = new Set(input.required_variables.map((v) => v.key));
   const undeclared = contentVars.filter((k) => !declaredKeys.has(k));
   if (undeclared.length > 0) {
@@ -464,10 +466,6 @@ function validateInput(input: TemplateInput): { ok: boolean; error?: string } {
   return { ok: true };
 }
 
-/**
- * Xóa static_audio + Storage files cho list segment_ids.
- * Dùng khi update template có segment stale.
- */
 async function deleteAllAudioForSegments(
   supabase: Awaited<ReturnType<typeof createClient>>,
   segmentIds: string[]
@@ -487,7 +485,6 @@ async function deleteAllAudioForSegments(
   }
   await supabase.from('static_audio').delete().in('segment_id', segmentIds);
 
-  // 2. Dynamic audio: chỉ xóa DB (Storage path có user_id, không enumerate được hết)
-  // Phase 2: cron job dọn orphan dynamic files
+  // 2. Dynamic audio: chỉ xóa DB
   await supabase.from('dynamic_audio').delete().in('segment_id', segmentIds);
 }
