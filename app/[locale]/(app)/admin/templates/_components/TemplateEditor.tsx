@@ -8,6 +8,7 @@ import {
   createTemplate,
   updateTemplate,
   type Frequency,
+  type TemplateBlock,
   type TemplateDetail,
   type TemplateInput,
 } from '@/lib/admin/template-actions';
@@ -16,7 +17,7 @@ import type { RequiredVariable } from '@/lib/admin/preset-variables';
 interface Props {
   open: boolean;
   mode: 'create' | 'edit';
-  template?: TemplateDetail | null; // chỉ có khi mode='edit'
+  template?: TemplateDetail | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -29,21 +30,18 @@ const FREQUENCY_OPTIONS: Array<{ value: Frequency; label: string }> = [
 ];
 
 export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props) {
-  // Form state
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [category, setCategory] = useState('ritual');
   const [frequency, setFrequency] = useState<Frequency>('monthly');
-  const [content, setContent] = useState('');
+  const [blocks, setBlocks] = useState<TemplateBlock[]>([]);
   const [variables, setVariables] = useState<RequiredVariable[]>([]);
   const [isFeatured, setIsFeatured] = useState(false);
 
-  // UI state
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSlugWarning, setShowSlugWarning] = useState(false);
 
-  // Init khi mở dialog
   useEffect(() => {
     if (!open) return;
     if (mode === 'edit' && template) {
@@ -51,7 +49,7 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
       setSlug(template.slug);
       setCategory(template.category);
       setFrequency(template.frequency);
-      setContent(template.content);
+      setBlocks(template.blocks);
       setVariables(template.required_variables);
       setIsFeatured(template.is_featured);
     } else {
@@ -59,7 +57,7 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
       setSlug('');
       setCategory('ritual');
       setFrequency('monthly');
-      setContent('');
+      setBlocks([]);
       setVariables([]);
       setIsFeatured(false);
     }
@@ -74,7 +72,7 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
       slug: slug.trim(),
       category: category.trim() || 'ritual',
       frequency,
-      content: content.trim(),
+      blocks,
       required_variables: variables,
       is_featured: isFeatured,
     };
@@ -83,7 +81,6 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
   async function handleSave() {
     setError(null);
 
-    // Slug đổi → hiện warning trước
     if (mode === 'edit' && template && slug.trim() !== template.slug) {
       setShowSlugWarning(true);
       return;
@@ -115,7 +112,6 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
     }
   }
 
-  // Auto-suggest slug from title (chỉ khi create)
   function handleTitleChange(v: string) {
     setTitle(v);
     if (mode === 'create' && !slug.trim()) {
@@ -128,15 +124,12 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/30"
         onClick={!saving ? onClose : undefined}
       />
 
-      {/* Slide-over panel */}
       <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-3xl flex-col bg-stone-50 shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4">
           <div>
             <h2 className="font-serif text-2xl font-bold text-stone-900">
@@ -157,10 +150,8 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
           </button>
         </div>
 
-        {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="space-y-5">
-            {/* Title */}
             <div>
               <label className="text-sm font-medium text-stone-700">Tiêu đề *</label>
               <input
@@ -171,12 +162,9 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
               />
             </div>
 
-            {/* Slug + Frequency */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-stone-700">
-                  Slug (URL) *
-                </label>
+                <label className="text-sm font-medium text-stone-700">Slug (URL) *</label>
                 <input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
@@ -184,7 +172,7 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
                   className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 font-mono text-sm shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 />
                 <p className="mt-1 text-xs text-stone-500">
-                  Chỉ chữ thường, số, gạch ngang. Đổi sẽ làm link cũ chết.
+                  Chỉ chữ thường, số, gạch ngang.
                 </p>
               </div>
 
@@ -196,24 +184,19 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
                   className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
                   {FREQUENCY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Category + Featured */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-stone-700">
-                  Loại nội dung
-                </label>
+                <label className="text-sm font-medium text-stone-700">Loại nội dung</label>
                 <input
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="VD: Gia tiên, Thần tài, Phật"
+                  placeholder="VD: Gia tiên, Thần tài"
                   className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 />
               </div>
@@ -231,11 +214,8 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
               </div>
             </div>
 
-            {/* Variables */}
             <div>
-              <label className="text-sm font-medium text-stone-700">
-                Biến cần thiết
-              </label>
+              <label className="text-sm font-medium text-stone-700">Biến cần thiết</label>
               <p className="mt-0.5 text-xs text-stone-500">
                 Khai báo các biến template này dùng. User sẽ điền (hoặc auto fill từ profile).
               </p>
@@ -244,18 +224,18 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
               </div>
             </div>
 
-            {/* Content */}
             <div>
               <label className="text-sm font-medium text-stone-700">
-                Nội dung văn khấn *
+                Nội dung văn khấn — chia block *
               </label>
               <p className="mt-0.5 text-xs text-stone-500">
-                Hệ thống sẽ tự tách thành các đoạn cố định (cache chung) và đoạn cá nhân hóa (gen riêng cho user).
+                Block <strong>cố định</strong> (xanh) pregen 1 lần share mọi user. Block{' '}
+                <strong>cá nhân hóa</strong> (vàng) gen riêng theo biến của từng user.
               </p>
               <div className="mt-2">
                 <ContentEditor
-                  value={content}
-                  onChange={setContent}
+                  blocks={blocks}
+                  onChange={setBlocks}
                   variables={variables}
                 />
               </div>
@@ -269,7 +249,6 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
           </div>
         </div>
 
-        {/* Footer — sticky */}
         <div className="flex items-center justify-end gap-2 border-t border-stone-200 bg-white px-6 py-4">
           <button
             onClick={onClose}
@@ -288,7 +267,6 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
         </div>
       </div>
 
-      {/* Slug warning modal */}
       {isEditMode && (
         <SlugWarningModal
           open={showSlugWarning}
@@ -303,15 +281,11 @@ export function TemplateEditor({ open, mode, template, onClose, onSaved }: Props
   );
 }
 
-/**
- * Slugify tiếng Việt → ASCII slug
- * "Văn khấn Rằm hàng tháng" → "van-khan-ram-hang-thang"
- */
 function slugify(text: string): string {
   const normalized = text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/đ/g, 'd');
 
   return normalized
