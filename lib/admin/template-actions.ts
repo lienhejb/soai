@@ -339,7 +339,6 @@ export async function updateTemplate(
       content: input.content,
       required_variables: input.required_variables,
       is_featured: input.is_featured ?? false,
-      // Note: KHÔNG update slug — slug immutable
     })
     .eq('id', id);
 
@@ -469,24 +468,26 @@ function validateInput(input: TemplateInput): { ok: boolean; error?: string } {
  * Xóa static_audio + Storage files cho list segment_ids.
  * Dùng khi update template có segment stale.
  */
-async function deleteStaticAudioForSegments(
+async function deleteAllAudioForSegments(
   supabase: Awaited<ReturnType<typeof createClient>>,
   segmentIds: string[]
 ): Promise<void> {
   if (segmentIds.length === 0) return;
   const admin = createAdminClient();
 
-  // Lấy list audio cần xóa Storage
-  const { data: audios } = await supabase
+  // 1. Static audio: xóa Storage + DB
+  const { data: staticAudios } = await supabase
     .from('static_audio')
     .select('segment_id, voice_key')
     .in('segment_id', segmentIds);
 
-  if (audios && audios.length > 0) {
-    const paths = audios.map((a) => `${a.segment_id}/${a.voice_key}.mp3`);
-    await admin.storage.from(STATIC_BUCKET).remove(paths);
+  if (staticAudios && staticAudios.length > 0) {
+    const staticPaths = staticAudios.map((a) => `${a.segment_id}/${a.voice_key}.mp3`);
+    await admin.storage.from(STATIC_BUCKET).remove(staticPaths);
   }
-
-  // Xóa DB rows
   await supabase.from('static_audio').delete().in('segment_id', segmentIds);
+
+  // 2. Dynamic audio: chỉ xóa DB (Storage path có user_id, không enumerate được hết)
+  // Phase 2: cron job dọn orphan dynamic files
+  await supabase.from('dynamic_audio').delete().in('segment_id', segmentIds);
 }

@@ -142,23 +142,76 @@ export async function prepareRenderedSo(
       durationMs = staticData.duration_ms!;
     } else {
       const renderedText = renderTemplate(seg.text, vars);
-      try {
-        const gen = await ttsWithTimestamps(renderedText, voiceProviderId);
-        const path = `${user.id}/dyn_${seg.id}_${voiceKey}_${variablesHash.slice(0, 8)}.mp3`;
-        const { error: upErr } = await admin.storage
-  .from(RENDERED_BUCKET)
-  .upload(path, gen.audioBuffer, {
-    contentType: 'audio/mpeg',
-    upsert: true,
-  });
-if (upErr) return { ok: false, error: `Upload dynamic: ${upErr.message}` };
+      const renderedTextHash = hashText(renderedText);
 
-const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path);
-        audioUrl = urlData.publicUrl;
-        lines = gen.lines;
-        durationMs = gen.durationMs;
-      } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : 'Gen dynamic lỗi' };
+      // Check dynamic_audio cache trước khi gen
+      const { data: cachedDyn } = await supabase
+        .from('dynamic_audio')
+        .select('audio_url, duration_ms, lines_with_timing')
+        .eq('user_id', user.id)
+        .eq('segment_id', seg.id)
+        .eq('voice_key', voiceKey)
+        .eq('variables_hash', variablesHash)
+        .eq('text_hash', renderedTextHash)
+        .maybeSingle();
+
+      if (cachedDyn) {
+        // Cache HIT — reuse, không tốn credit
+        audioUrl = cachedDyn.audio_url;
+        lines = cachedDyn.lines_with_timing as LineWithTiming[];
+        durationMs = cachedDyn.duration_ms;
+
+        // Update last_accessed_at (không await)
+        supabase
+          .from('dynamic_audio')
+          .update({ last_accessed_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('segment_id', seg.id)
+          .eq('voice_key', voiceKey)
+          .eq('variables_hash', variablesHash)
+          .eq('text_hash', renderedTextHash)
+          .then(() => {});
+      } else {
+        // Cache MISS — gen mới
+        try {
+          const gen = await ttsWithTimestamps(renderedText, voiceProviderId);
+          const path = `${user.id}/dyn_${seg.id}_${voiceKey}_${variablesHash.slice(0, 8)}.mp3`;
+
+          const { error: upErr } = await admin.storage
+            .from(RENDERED_BUCKET)
+            .upload(path, gen.audioBuffer, {
+              contentType: 'audio/mpeg',
+              upsert: true,
+            });
+          if (upErr) return { ok: false, error: `Upload dynamic: ${upErr.message}` };
+
+          const { data: urlData } = admin.storage.from(RENDERED_BUCKET).getPublicUrl(path);
+          audioUrl = urlData.publicUrl;
+          lines = gen.lines;
+          durationMs = gen.durationMs;
+
+          // Insert vào dynamic_audio cache (xóa record cũ cùng key trước nếu có)
+          await supabase
+            .from('dynamic_audio')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('segment_id', seg.id)
+            .eq('voice_key', voiceKey)
+            .eq('variables_hash', variablesHash);
+
+          await supabase.from('dynamic_audio').insert({
+            user_id: user.id,
+            segment_id: seg.id,
+            voice_key: voiceKey,
+            variables_hash: variablesHash,
+            text_hash: renderedTextHash,
+            audio_url: audioUrl,
+            duration_ms: durationMs,
+            lines_with_timing: lines,
+          });
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : 'Gen dynamic lỗi' };
+        }
       }
     }
 
