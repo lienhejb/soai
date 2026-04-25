@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { prepareRenderedSo } from '@/lib/voice-clone/prepare-so';
 import { finalizeRenderedSo } from '@/lib/voice-clone/upload-rendered';
 import { mergeAudioUrlsToMp3 } from '@/lib/audio/mergeAudioUrls';
+// (đã có prepareRenderedSo + finalizeRenderedSo + mergeAudioUrlsToMp3 — không cần thêm gì)
 
 interface Voice {
   id: string;
@@ -40,37 +41,86 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
   const currentVoice = voices.find((v) => v.id === voiceId)!;
 
   async function handlePlay() {
-    if (playing) {
-      audioRef.current?.pause();
-      setPlaying(false);
-      return;
-    }
+  if (playing) {
+    audioRef.current?.pause();
+    setPlaying(false);
+    return;
+  }
 
-    if (!audioUrl) {
-      setLoading(true);
-      await new Promise((r) => setTimeout(r, 300));
-      setAudioUrl(`/api/tts?slug=${templateSlug}&voice_id=${voiceId}&t=${Date.now()}`);
-      setLoading(false);
-    }
-
+  // Nếu đã có URL → play luôn
+  if (audioUrl) {
     setTimeout(() => {
       audioRef.current?.play();
       setPlaying(true);
     }, 50);
+    return;
   }
 
-  function handleVoiceChange(newId: string) {
-    if (newId === voiceId) {
-      setVoicePickerOpen(false);
-      return;
-    }
-    setVoiceId(newId);
-    setVoicePickerOpen(false);
-    audioRef.current?.pause();
-    setAudioUrl(null);
-    setPlaying(false);
-    showToast(`Đã đổi sang ${voices.find((v) => v.id === newId)?.label}`);
+  // Chưa có → prepare/merge giống flow hành lễ nhưng không upload + không redirect
+  setLoading(true);
+  try {
+    const url = await prepareAndMergeForListen();
+    if (!url) return; // error đã set bên trong
+    setAudioUrl(url);
+    setTimeout(() => {
+      audioRef.current?.play();
+      setPlaying(true);
+    }, 50);
+  } finally {
+    setLoading(false);
   }
+}
+
+async function prepareAndMergeForListen(): Promise<string | null> {
+  const voiceKey = voices.find((v) => v.id === voiceId)?.voice_key;
+  if (!voiceKey) {
+    showToast('Voice không hợp lệ');
+    return null;
+  }
+
+  const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId);
+  if (!res.ok) {
+    showToast(res.error ?? 'Không tải được sớ');
+    return null;
+  }
+
+  // Cache hit — đã có merged URL
+  if (res.cached) {
+    return res.cached.merged_audio_url;
+  }
+
+  if (!res.segments || !res.finalize) {
+    showToast('Dữ liệu trả về không hợp lệ');
+    return null;
+  }
+
+  // Cache miss — merge client-side, KHÔNG upload (NGHE không cần persist merged)
+  const sortedSegments = res.segments.sort((a, b) => a.order_index - b.order_index);
+  const urls = sortedSegments.map((s) => s.audio_url);
+  const segmentTypes = sortedSegments.map((s) => s.segment_type);
+  const mergedBlob = await mergeAudioUrlsToMp3(urls, voiceKey, segmentTypes);
+
+  return URL.createObjectURL(mergedBlob);
+}
+
+  function handleVoiceChange(newId: string) {
+  if (newId === voiceId) {
+    setVoicePickerOpen(false);
+    return;
+  }
+  setVoiceId(newId);
+  setVoicePickerOpen(false);
+  audioRef.current?.pause();
+  
+  // Revoke blob URL cũ nếu là blob (NGHE cache miss tạo blob)
+  if (audioUrl?.startsWith('blob:')) {
+    URL.revokeObjectURL(audioUrl);
+  }
+  setAudioUrl(null);
+  
+  setPlaying(false);
+  showToast(`Đã đổi sang ${voices.find((v) => v.id === newId)?.label}`);
+}
 
   function handleDownload() {
     if (!audioUrl) {
