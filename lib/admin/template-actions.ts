@@ -369,8 +369,8 @@ export async function updateTemplate(
       .map((s) => s.id);
 
     if (staleSegmentIds.length > 0) {
-      await deleteStaticAudioForSegments(supabase, staleSegmentIds);
-    }
+  await deleteAllAudioForSegments(supabase, staleSegmentIds);
+}
 
     // Update text + text_hash của các segment stale
     for (const newSeg of newSegments) {
@@ -391,7 +391,7 @@ export async function updateTemplate(
   } else {
     // Count khác → nuke segments cũ + insert mới
     const allOldIds = oldSegments.map((s) => s.id);
-    await deleteStaticAudioForSegments(supabase, allOldIds);
+    await deleteAllAudioForSegments(supabase, allOldIds);
 
     await supabase.from('template_segments').delete().eq('template_id', id);
 
