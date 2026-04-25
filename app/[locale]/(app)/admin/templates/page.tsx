@@ -13,8 +13,8 @@ export default async function AdminTemplatesPage() {
       redirect('/vi/dashboard');
     }
     return (
-      <main className="min-h-screen bg-stone-50/50 px-6 py-10">
-        <div className="mx-auto max-w-6xl">
+      <main className="min-h-screen bg-stone-50/50 px-4 py-6 sm:px-6 sm:py-10">
+  <div className="mx-auto max-w-7xl">
           <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700">
             Lỗi: {res.error ?? 'Không load được template'}
           </div>
@@ -38,8 +38,8 @@ export default async function AdminTemplatesPage() {
   }));
 
   return (
-    <main className="min-h-screen bg-stone-50/50 px-6 py-10">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-stone-50/50 px-4 py-6 sm:px-6 sm:py-10">
+  <div className="mx-auto max-w-7xl">
         <header className="mb-8">
           <h1 className="font-serif text-3xl font-bold text-stone-900">
             Quản lý Thư viện Văn khấn
