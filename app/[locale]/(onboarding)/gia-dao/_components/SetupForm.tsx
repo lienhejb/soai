@@ -127,7 +127,6 @@ export function SetupForm({ voices }: Props) {
           </button>
         </div>
       </div>
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </>
   );
 }
