@@ -116,13 +116,14 @@ if (!address.trim()) {
     Họ tên Gia Chủ <span className="text-rose-500">*</span>
   </span>
   <input
-    type="text"
-    value={displayName}
-    onChange={(e) => setDisplayName(e.target.value)}
-    placeholder="Ví dụ: Nguyễn Văn A"
-    required
-    className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-stone-800 placeholder:text-stone-400 shadow-inner transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-  />
+  type="text"
+  value={displayName}
+  onChange={(e) => setDisplayName(e.target.value)}
+  placeholder="Ví dụ: Nguyễn Văn A"
+  required
+  autoComplete="name"
+  className="w-full rounded-xl border ..."
+/>
   {displayName.trim() && (
     <p className="mt-1.5 text-xs text-stone-500">
       Họ trong văn khấn: <span className="font-medium text-amber-700">{displayName.trim().split(/\s+/)[0]}</span>
@@ -184,13 +185,14 @@ if (!address.trim()) {
   Địa chỉ cư trú <span className="text-rose-500">*</span>
 </span>
             <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Ví dụ: Số 12, Ngõ 3, Hà Nội"
-              required
-              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-stone-800 placeholder:text-stone-400 shadow-inner transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-            />
+  type="text"
+  value={address}
+  onChange={(e) => setAddress(e.target.value)}
+  placeholder="Ví dụ: Số 12, Ngõ 3, Hà Nội"
+  required
+  autoComplete="street-address"
+  className="w-full rounded-xl border ..."
+/>
           </label>
 
           {error && (

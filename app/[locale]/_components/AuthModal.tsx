@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { sendOtp, verifyOtp } from '@/lib/auth/actions';
 import { clearDraft, loadDraft } from '@/lib/draft';
@@ -234,6 +234,18 @@ function OtpStep({
   loading: boolean;
   error: string | null;
 }) {
+  // Auto-submit khi đủ 6 số (chỉ chạy 1 lần cho mỗi token đầy đủ)
+  const submittedRef = useRef<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (token.length === 6 && !loading && submittedRef.current !== token) {
+      submittedRef.current = token;
+      // Submit form qua requestSubmit để giữ nguyên flow gốc (không bypass validation)
+      formRef.current?.requestSubmit();
+    }
+  }, [token, loading]);
+
   return (
     <>
       <div className="mb-6 text-center">
@@ -248,12 +260,13 @@ function OtpStep({
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
         <input
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
           maxLength={6}
+          autoComplete="one-time-code"
           value={token}
           onChange={(e) => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
           placeholder="123456"

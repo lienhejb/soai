@@ -91,17 +91,19 @@ export function SetupForm({ voices }: Props) {
 
         <div className="space-y-4">
           <Field
-            label="Tên Gia Chủ"
-            placeholder="Ví dụ: Nguyễn Văn A"
-            value={ownerName}
-            onChange={setOwnerName}
-          />
+  label="Tên Gia Chủ"
+  placeholder="Ví dụ: Nguyễn Văn A"
+  value={ownerName}
+  onChange={setOwnerName}
+  autoComplete="name"
+/>
           <Field
-            label="Địa chỉ hành lễ"
-            placeholder="Ví dụ: Số 12, Ngõ 3, Hà Nội"
-            value={address}
-            onChange={setAddress}
-          />
+  label="Địa chỉ hành lễ"
+  placeholder="Ví dụ: Số 12, Ngõ 3, Hà Nội"
+  value={address}
+  onChange={setAddress}
+  autoComplete="street-address"
+/>
         </div>
 
         <div className="mt-8">
@@ -142,8 +144,15 @@ function SectionTitle({ index, title, subtitle }: { index: string; title: string
 }
 
 function Field({
-  label, placeholder, value, onChange,
-}: { label: string; placeholder: string; value: string; onChange: (v: string) => void }) {
+  label, placeholder, value, onChange, autoComplete = 'off', inputMode,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+  inputMode?: 'text' | 'email' | 'tel' | 'url' | 'numeric' | 'decimal' | 'search';
+}) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm text-[var(--ink)]">{label}</span>
@@ -152,8 +161,9 @@ function Field({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
         className="w-full rounded-sm border border-[var(--gold-soft)] bg-[var(--bg-paper-2)] px-4 py-3 text-[var(--ink)] placeholder:text-[var(--muted)]/70 focus:border-[var(--gold)] focus:outline-none focus:ring-1 focus:ring-[var(--gold)]"
-        autoComplete="off"
       />
     </label>
   );

@@ -1,3 +1,5 @@
+//middleware.ts
+
 import { type NextRequest, NextResponse } from 'next/server';
 import createIntlMiddleware from 'next-intl/middleware';
 import { updateSession } from './lib/supabase/middleware';
