@@ -1,6 +1,19 @@
 import { Link } from '@/i18n/navigation';
+import type { Metadata } from 'next';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+  title: 'Admin — GiongDoc',
+};
+
+export default function AdminLayout({... children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-stone-50/50">
       {/* Admin Header */}

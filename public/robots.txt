@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /vi/admin/
+Disallow: /api/
+Disallow: /vi/auth/
+
+# Sitemap
+Sitemap: https://giongdoc.com/sitemap.xml
