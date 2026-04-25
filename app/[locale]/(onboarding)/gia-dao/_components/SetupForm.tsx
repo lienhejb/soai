@@ -15,7 +15,6 @@ interface Props {
 export function SetupForm({ voices }: Props) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
 
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(voices[0]?.voice_id ?? '');
   const [ownerName, setOwnerName] = useState('');
@@ -67,8 +66,10 @@ export function SetupForm({ voices }: Props) {
   const canSubmit = ownerName.trim() && address.trim() && selectedVoiceId;
 
   function handleSubmit() {
-  setAuthOpen(true);
-}
+    // Draft đã auto-save qua useEffect ở trên rồi.
+    // Guest vào thẳng trang sớ public với data từ draft, không yêu cầu login.
+    router.push('/so/van-khan-mung-1');
+  }
 
   // Tránh render khi chưa hydrate (tránh flash sai data)
   if (!hydrated) return null;

@@ -1,5 +1,6 @@
 'use client';
 
+import { loadDraft } from '@/lib/draft';
 import { useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { prepareRenderedSo } from '@/lib/voice-clone/prepare-so';
@@ -81,7 +82,8 @@ async function prepareAndMergeForListen(): Promise<string | null> {
     return null;
   }
 
-  const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId);
+  const guestOverride = isGuest ? loadGuestOverride() : undefined;
+  const res = await prepareRenderedSo(templateSlug, voiceKey, voiceId, guestOverride);
   if (!res.ok) {
     showToast(res.error ?? 'Không tải được sớ');
     return null;
@@ -318,6 +320,18 @@ async function prepareAndMergeForListen(): Promise<string | null> {
       <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
+}
+
+function loadGuestOverride() {
+  const draft = loadDraft();
+  if (!draft) return undefined;
+  const owner = draft.owner_name?.trim();
+  const addr = draft.address?.trim();
+  if (!owner && !addr) return undefined;
+  return {
+    owner_name: owner || '',
+    address: addr || '',
+  };
 }
 
 function Spinner() {

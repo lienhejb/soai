@@ -39,10 +39,16 @@ export interface PrepareSoResult {
   };
 }
 
+export interface GuestVarsOverride {
+  owner_name: string;
+  address: string;
+}
+
 export async function prepareRenderedSo(
   templateSlug: string,
   voiceKey: string,
-  voiceProviderId: string
+  voiceProviderId: string,
+  guestVarsOverride?: GuestVarsOverride
 ): Promise<PrepareSoResult> {
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -61,13 +67,18 @@ export async function prepareRenderedSo(
     .single();
   if (!template) return { ok: false, error: 'Template không tồn tại' };
 
-  // Guest: lấy thẳng từ GUEST_PROFILE (không cần query DB)
+  // Guest: ưu tiên draft override (data form vừa nhập), fallback GUEST_PROFILE
   // User: query profile thật
   let displayName: string;
   let address: string;
   if (isGuest) {
-    displayName = GUEST_PROFILE.display_name;
-    address = GUEST_PROFILE.address;
+    if (guestVarsOverride && (guestVarsOverride.owner_name?.trim() || guestVarsOverride.address?.trim())) {
+      displayName = guestVarsOverride.owner_name?.trim() || GUEST_PROFILE.display_name;
+      address = guestVarsOverride.address?.trim() || GUEST_PROFILE.address;
+    } else {
+      displayName = GUEST_PROFILE.display_name;
+      address = GUEST_PROFILE.address;
+    }
   } else {
     const { data: profile } = await supabase
       .from('profiles')

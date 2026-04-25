@@ -1,3 +1,4 @@
+import { SoContent } from './_components/SoContent';
 import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
@@ -160,9 +161,11 @@ export default async function SoDetailPage({ params }: PageProps) {
         <div className="mb-3 text-xs uppercase tracking-widest text-stone-400">
           Nội dung
         </div>
-        <p className="whitespace-pre-line font-serif text-lg leading-loose text-stone-800">
-          {rendered}
-        </p>
+        <SoContent
+          rawText={fullText}
+          serverRendered={rendered}
+          isGuest={isGuest}
+        />
       </div>
     </div>
   );
