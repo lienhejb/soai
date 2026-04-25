@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ttsWithTimestamps, type LineWithTiming } from '@/lib/elevenlabs/tts-with-timestamps';
 import { createHash } from 'crypto';
 import { getDateStringsForSo } from '@/lib/lunar';
+import { GUEST_USER_ID, GUEST_PROFILE } from '@/lib/guest';
 
 const STATIC_BUCKET = 'audio-static';
 const RENDERED_BUCKET = 'audio-rendered';
@@ -46,7 +47,11 @@ export async function prepareRenderedSo(
   const supabase = await createClient();
   const admin = createAdminClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Chưa đăng nhập' };
+
+  // Guest mode: user chưa login → dùng system guest user (cố định)
+  // Mọi guest share chung 1 user_id → cache cross-guest, tiết kiệm credit
+  const userId = user?.id ?? GUEST_USER_ID;
+  const isGuest = !user;
 
   const { data: template } = await supabase
     .from('templates')
@@ -56,21 +61,32 @@ export async function prepareRenderedSo(
     .single();
   if (!template) return { ok: false, error: 'Template không tồn tại' };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, address')
-    .eq('id', user.id)
-    .single();
+  // Guest: lấy thẳng từ GUEST_PROFILE (không cần query DB)
+  // User: query profile thật
+  let displayName: string;
+  let address: string;
+  if (isGuest) {
+    displayName = GUEST_PROFILE.display_name;
+    address = GUEST_PROFILE.address;
+  } else {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, address')
+      .eq('id', userId)
+      .single();
+    displayName = profile?.display_name || '';
+    address = profile?.address || 'Địa chỉ không rõ';
+  }
 
-  const fullName = profile?.display_name || '';
-const familySurname = fullName.trim().split(/\s+/)[0] || 'Tín chủ';
+  const familySurname = displayName.trim().split(/\s+/)[0] || 'Tín chủ';
 
-const vars = {
-  owner_name: fullName || 'Tín chủ',
-  family_surname: familySurname,
-  address: profile?.address || 'Địa chỉ không rõ',
-  ...getDateStringsForSo(),
-};
+  const vars = {
+    owner_name: displayName || 'Tín chủ',
+    family_surname: familySurname,
+    address,
+    ...getDateStringsForSo(),
+  };
+  
   const variablesHash = hashVariables(vars);
 
   // Fetch segments TRƯỚC để tính fingerprint

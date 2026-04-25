@@ -3,6 +3,7 @@ import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
 import { getDateStringsForSo } from '@/lib/lunar';
+import { GUEST_PROFILE } from '@/lib/guest';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,25 +35,40 @@ export default async function SoDetailPage({ params }: PageProps) {
   if (!template) notFound();
 
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, address, gender')
-    .eq('id', user!.id)
-    .single();
+  const isGuest = !user;
+
+  // Guest: hiển thị placeholder cố định "Nguyễn Văn A" / "Hà Nội"
+  // User: query profile thật
+  let displayName: string;
+  let address: string;
+  let gender: string | null = null;
+
+  if (isGuest) {
+    displayName = GUEST_PROFILE.display_name;
+    address = GUEST_PROFILE.address;
+  } else {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, address, gender')
+      .eq('id', user.id)
+      .single();
+    displayName = profile?.display_name || '';
+    address = profile?.address || '[Địa chỉ]';
+    gender = profile?.gender ?? null;
+  }
 
   const fullText = (template.template_segments ?? [])
     .map((s) => s.text)
     .join('\n\n');
 
-  const fullName = profile?.display_name || '';
-const familySurname = fullName.trim().split(/\s+/)[0] || 'Tín chủ';
+  const familySurname = displayName.trim().split(/\s+/)[0] || 'Tín chủ';
 
-const rendered = renderTemplate(fullText, {
-  owner_name: fullName || '[Tín chủ]',
-  family_surname: familySurname,
-  address: profile?.address || '[Địa chỉ]',
-  ...getDateStringsForSo(),
-});
+  const rendered = renderTemplate(fullText, {
+    owner_name: displayName || '[Tín chủ]',
+    family_surname: familySurname,
+    address: address || '[Địa chỉ]',
+    ...getDateStringsForSo(),
+  });
 
   // Fetch voices từ DB
   const { data: systemVoices } = await supabase
@@ -72,14 +88,17 @@ const rendered = renderTemplate(fullText, {
     }));
 
   const defaultVoice = availableVoices.find((v) =>
-    v.gender === (profile?.gender === 'female' ? 'female' : 'male')
+    v.gender === (gender === 'female' ? 'female' : 'male')
   ) ?? availableVoices[0];
 
   const defaultVoiceId = defaultVoice?.id ?? '';
 
   return (
     <div className="px-5 pt-6 pb-24">
-      <Link href="/dashboard" className="mb-4 inline-block text-sm text-stone-500 hover:text-stone-800">
+      <Link
+        href={isGuest ? '/' : '/dashboard'}
+        className="mb-4 inline-block text-sm text-stone-500 hover:text-stone-800"
+      >
         ← Trang chủ
       </Link>
 
@@ -93,6 +112,7 @@ const rendered = renderTemplate(fullText, {
         templateTitle={template.title}
         voices={availableVoices}
         defaultVoiceId={defaultVoiceId}
+        isGuest={isGuest}
       />
 
       {/* Nội dung sớ */}
