@@ -86,7 +86,7 @@ export async function prepareRenderedSo(
     address,
     ...getDateStringsForSo(),
   };
-  
+
   const variablesHash = hashVariables(vars);
 
   // Fetch segments TRƯỚC để tính fingerprint
@@ -110,7 +110,7 @@ export async function prepareRenderedSo(
   const { data: cached } = await supabase
     .from('user_rendered_audio')
     .select('merged_audio_url, lines_with_timing, duration_ms')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('template_id', template.id)
     .eq('voice_key', voiceKey)
     .eq('variables_hash', variablesHash)
@@ -122,7 +122,7 @@ export async function prepareRenderedSo(
     supabase
       .from('user_rendered_audio')
       .update({ last_accessed_at: new Date().toISOString() })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('template_id', template.id)
       .eq('voice_key', voiceKey)
       .eq('variables_hash', variablesHash)
@@ -170,7 +170,7 @@ export async function prepareRenderedSo(
       const { data: cachedDyn } = await supabase
         .from('dynamic_audio')
         .select('audio_url, duration_ms, lines_with_timing')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('segment_id', seg.id)
         .eq('voice_key', voiceKey)
         .eq('variables_hash', variablesHash)
@@ -187,7 +187,7 @@ export async function prepareRenderedSo(
         supabase
           .from('dynamic_audio')
           .update({ last_accessed_at: new Date().toISOString() })
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('segment_id', seg.id)
           .eq('voice_key', voiceKey)
           .eq('variables_hash', variablesHash)
@@ -197,7 +197,7 @@ export async function prepareRenderedSo(
         // Cache MISS — gen mới
         try {
           const gen = await ttsWithTimestamps(renderedText, voiceProviderId);
-          const path = `${user.id}/dyn_${seg.id}_${voiceKey}_${variablesHash.slice(0, 8)}.mp3`;
+          const path = `${userId}/dyn_${seg.id}_${voiceKey}_${variablesHash.slice(0, 8)}.mp3`;
 
           const { error: upErr } = await admin.storage
             .from(RENDERED_BUCKET)
@@ -216,13 +216,13 @@ export async function prepareRenderedSo(
           await supabase
             .from('dynamic_audio')
             .delete()
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('segment_id', seg.id)
             .eq('voice_key', voiceKey)
             .eq('variables_hash', variablesHash);
 
           await supabase.from('dynamic_audio').insert({
-            user_id: user.id,
+            user_id: userId,
             segment_id: seg.id,
             voice_key: voiceKey,
             variables_hash: variablesHash,
