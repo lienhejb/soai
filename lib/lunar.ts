@@ -18,7 +18,7 @@ export function getTodayInfo(date: Date = new Date()): DateInfo {
 
   const lunarDay = String(lunar.getDay()).padStart(2, '0');
   const lunarMonth = String(lunar.getMonth()).padStart(2, '0');
-  const yearName = `${lunar.getYearInGanZhi()}`;
+  const yearName = ganZhiToVietnamese(lunar.getYearInGanZhi());
 
   return {
     solar: `${dd}/${mm}/${yyyy}`,
@@ -61,9 +61,30 @@ export function getLunarDateFullString(date: Date = new Date()): string {
   const lunar = Solar.fromDate(date).getLunar();
   const day = lunar.getDay();
   const month = lunar.getMonth();
-  const yearGanZhi = lunar.getYearInGanZhi();
+  const yearGanZhi = ganZhiToVietnamese(lunar.getYearInGanZhi());
 
   return `ngày ${formatLunarDay(day)} tháng ${formatLunarMonth(month)} năm ${yearGanZhi}`;
+}
+
+/**
+ * Convert Can-Chi từ Hán tự (丙午) sang Việt latinh (Bính Ngọ)
+ * Thư viện lunar-javascript trả về 2 ký tự Hán: [Can][Chi]
+ */
+function ganZhiToVietnamese(ganZhi: string): string {
+  const can: Record<string, string> = {
+    '甲': 'Giáp', '乙': 'Ất', '丙': 'Bính', '丁': 'Đinh', '戊': 'Mậu',
+    '己': 'Kỷ',  '庚': 'Canh', '辛': 'Tân',  '壬': 'Nhâm', '癸': 'Quý',
+  };
+  const chi: Record<string, string> = {
+    '子': 'Tý',  '丑': 'Sửu', '寅': 'Dần', '卯': 'Mão', '辰': 'Thìn',
+    '巳': 'Tỵ',  '午': 'Ngọ', '未': 'Mùi', '申': 'Thân', '酉': 'Dậu',
+    '戌': 'Tuất', '亥': 'Hợi',
+  };
+
+  if (ganZhi.length !== 2) return ganZhi; // fallback
+  const canVi = can[ganZhi[0]] ?? ganZhi[0];
+  const chiVi = chi[ganZhi[1]] ?? ganZhi[1];
+  return `${canVi} ${chiVi}`;
 }
 
 /**
