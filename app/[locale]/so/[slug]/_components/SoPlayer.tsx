@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { prepareRenderedSo } from '@/lib/voice-clone/prepare-so';
 import { finalizeRenderedSo } from '@/lib/voice-clone/upload-rendered';
 import { mergeAudioUrlsToMp3 } from '@/lib/audio/mergeAudioUrls';
+import { AuthModal } from '@/app/[locale]/_components/AuthModal';
 // (đã có prepareRenderedSo + finalizeRenderedSo + mergeAudioUrlsToMp3 — không cần thêm gì)
 
 interface Voice {
@@ -20,11 +21,12 @@ interface Props {
   templateTitle: string;
   voices: Voice[];
   defaultVoiceId: string;
+  isGuest: boolean;
 }
 
 type RenderStatus = 'idle' | 'preparing' | 'merging' | 'uploading' | 'done' | 'error';
 
-export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }: Props) {
+export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId, isGuest }: Props) {
   const router = useRouter();
 
   const [voiceId, setVoiceId] = useState(defaultVoiceId);
@@ -33,6 +35,7 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId }
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [renderStatus, setRenderStatus] = useState<RenderStatus>('idle');
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -150,6 +153,12 @@ async function prepareAndMergeForListen(): Promise<string | null> {
   }
 
   async function handleHanhLe() {
+  // Guest: bắt đăng nhập trước khi hành lễ (cần lưu vào DB user thật)
+  if (isGuest) {
+    setAuthModalOpen(true);
+    return;
+  }
+
   setRenderStatus('preparing');
   setRenderError(null);
 
@@ -305,6 +314,8 @@ async function prepareAndMergeForListen(): Promise<string | null> {
           {toast}
         </div>
       )}
+
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 }
