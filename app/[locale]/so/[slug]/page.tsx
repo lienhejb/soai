@@ -172,5 +172,7 @@ export default async function SoDetailPage({ params }: PageProps) {
 }
 
 function renderTemplate(content: string, vars: Record<string, string>): string {
-  return content.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? `[${k}]`);
+  return content
+    .replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? `[${k}]`)
+    .replace(/\n{3,}/g, '\n\n');
 }

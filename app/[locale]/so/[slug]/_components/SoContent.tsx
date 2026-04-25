@@ -33,12 +33,14 @@ export function SoContent({ rawText, serverRendered, isGuest }: Props) {
   }, [isGuest, rawText]);
 
   return (
-    <p className="whitespace-pre-line font-serif text-lg leading-loose text-stone-800">
+    <p className="whitespace-pre-line font-serif text-lg leading-relaxed text-stone-800">
       {text}
     </p>
   );
 }
 
 function renderTemplate(content: string, vars: Record<string, string>): string {
-  return content.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? `[${k}]`);
+  return content
+    .replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? `[${k}]`)
+    .replace(/\n{3,}/g, '\n\n'); // collapse 3+ newlines → 2
 }
