@@ -187,3 +187,18 @@ body {
   margin: 0 auto;
   background: linear-gradient(90deg, transparent 0%, var(--gold-bright) 50%, transparent 100%);
 }
+
+@keyframes lotusPulse {
+  0%, 100% {
+    opacity: 0.85;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.35);
+  }
+}
+
+.animate-lotus-pulse {
+  animation: lotusPulse 2.4s ease-in-out infinite;
+}

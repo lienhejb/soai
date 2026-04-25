@@ -129,40 +129,75 @@ function LotusPlaceholder({ active, size }: { active: boolean; size: number }) {
       }`}
     >
       <svg
-        width={size * 0.55}
-        height={size * 0.55}
-        viewBox="0 0 100 100"
-        fill="none"
-        aria-hidden
-      >
-        {/* Hào quang vòng ngoài */}
-        <circle
-          cx="50"
-          cy="50"
-          r="44"
-          stroke="var(--soft-gold)"
-          strokeWidth="0.4"
-          strokeDasharray="1 3"
-          opacity={active ? '0.6' : '0.25'}
-          className={active ? 'origin-center animate-spin [animation-duration:20s]' : ''}
-        />
-        {/* Cánh sen trung tâm */}
-        <g transform="translate(50, 50)">
-          {/* 5 cánh */}
-          {[0, 72, 144, 216, 288].map((angle) => (
-            <path
-              key={angle}
-              d="M 0 -5 Q -10 -20, 0 -32 Q 10 -20, 0 -5 Z"
-              fill="var(--soft-gold)"
-              opacity={active ? '0.85' : '0.55'}
-              transform={`rotate(${angle})`}
-            />
-          ))}
-          {/* Nhị sen */}
-          <circle r="5" fill="var(--soft-gold)" opacity={active ? '1' : '0.8'} />
-          <circle r="2.5" fill="#0a0808" opacity="0.4" />
-        </g>
-      </svg>
+  width={size * 0.55}
+  height={size * 0.55}
+  viewBox="0 0 100 100"
+  fill="none"
+  aria-hidden
+>
+  <defs>
+    {/* Glow filter — pulse nhẹ */}
+    <filter id="lotus-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    {/* Radial gradient cho aura tỏa ra từ tâm */}
+    <radialGradient id="lotus-aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stopColor="var(--soft-gold)" stopOpacity="0.5" />
+      <stop offset="60%" stopColor="var(--soft-gold)" stopOpacity="0.1" />
+      <stop offset="100%" stopColor="var(--soft-gold)" stopOpacity="0" />
+    </radialGradient>
+  </defs>
+
+  {/* Aura tỏa từ tâm — chỉ hiện khi đọc */}
+  {active && (
+    <circle
+      cx="50"
+      cy="50"
+      r="40"
+      fill="url(#lotus-aura)"
+      className="animate-lotus-pulse origin-center"
+    />
+  )}
+
+  {/* Hào quang vòng ngoài (giữ nguyên) */}
+  <circle
+    cx="50"
+    cy="50"
+    r="44"
+    stroke="var(--soft-gold)"
+    strokeWidth="0.4"
+    strokeDasharray="1 3"
+    opacity={active ? '0.6' : '0.25'}
+    className={active ? 'origin-center animate-spin [animation-duration:20s]' : ''}
+  />
+
+  {/* Cánh sen + nhị — apply glow filter khi active */}
+  <g transform="translate(50, 50)" filter={active ? 'url(#lotus-glow)' : undefined}>
+    {/* 5 cánh */}
+    {[0, 72, 144, 216, 288].map((angle) => (
+      <path
+        key={angle}
+        d="M 0 -5 Q -10 -20, 0 -32 Q 10 -20, 0 -5 Z"
+        fill="var(--soft-gold)"
+        opacity={active ? '0.9' : '0.55'}
+        transform={`rotate(${angle})`}
+        className={active ? 'animate-lotus-pulse' : ''}
+      />
+    ))}
+    {/* Nhị sen */}
+    <circle
+      r="5"
+      fill="var(--soft-gold)"
+      opacity={active ? '1' : '0.8'}
+      className={active ? 'animate-lotus-pulse' : ''}
+    />
+    <circle r="2.5" fill="#0a0808" opacity="0.4" />
+  </g>
+</svg>
     </div>
   );
 }

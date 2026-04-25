@@ -27,21 +27,28 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
 
   if (!template) redirect('/vi/so');
 
-  // Resolve voice: ưu tiên ?voice= từ query, fallback voice mặc định theo gender
-  let voiceKey = voice;
-  let voiceProviderId: string | null = null;
+  // Resolve voice: ưu tiên ?voice= từ query, fallback theo gender
+  let voiceMeta: {
+    voice_key: string;
+    provider_voice_id: string | null;
+    display_name: string;
+    description: string | null;
+    gender: 'male' | 'female';
+  } | null = null;
 
-  if (voiceKey) {
+  if (voice) {
     const { data: vRow } = await supabase
       .from('system_voices')
-      .select('voice_key, provider_voice_id')
-      .eq('voice_key', voiceKey)
+      .select('voice_key, provider_voice_id, display_name, description, gender')
+      .eq('voice_key', voice)
       .eq('is_active', true)
       .maybeSingle();
-    voiceProviderId = vRow?.provider_voice_id ?? null;
+    if (vRow?.provider_voice_id) {
+      voiceMeta = vRow as typeof voiceMeta;
+    }
   }
 
-  if (!voiceProviderId) {
+  if (!voiceMeta) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('gender')
@@ -50,7 +57,7 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
 
     const { data: voices } = await supabase
       .from('system_voices')
-      .select('voice_key, provider_voice_id, gender')
+      .select('voice_key, provider_voice_id, display_name, description, gender')
       .eq('is_active', true)
       .order('sort_order');
 
@@ -59,12 +66,11 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
     ) ?? voices?.[0];
 
     if (!fallback?.provider_voice_id) redirect(`/vi/so/${slug}`);
-    voiceKey = fallback.voice_key;
-    voiceProviderId = fallback.provider_voice_id;
+    voiceMeta = fallback as typeof voiceMeta;
   }
 
-  // Gọi prepareRenderedSo — đã warm cache từ trang sớ rồi nên đa số là cache hit
-  const res = await prepareRenderedSo(slug, voiceKey!, voiceProviderId!);
+  // Gọi prepareRenderedSo
+  const res = await prepareRenderedSo(slug, voiceMeta!.voice_key, voiceMeta!.provider_voice_id!);
 
   if (!res.ok) {
     console.error('[hanh-le] prepare error:', res.error);
@@ -77,8 +83,6 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
   let allLines: RenderedSoData['lines'];
 
   if (res.cached) {
-    // Cache hit — chỉ có merged URL, không có segments riêng
-    // → Treat as single segment
     segments = [{
       audio_url: res.cached.merged_audio_url,
       duration_ms: res.cached.duration_ms,
@@ -92,7 +96,6 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
       segment_id: (l as { segment_id?: string }).segment_id,
     }));
   } else if (res.segments && res.finalize) {
-    // Cache miss — segments riêng lẻ
     segments = res.segments
       .sort((a, b) => a.order_index - b.order_index)
       .map((s) => ({
@@ -111,11 +114,22 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
     redirect(`/vi/so/${slug}`);
   }
 
+  // Build role hiển thị từ description + gender
+  const genderLabel = voiceMeta!.gender === 'female' ? 'Nữ' : 'Nam';
+  const role = voiceMeta!.description
+    ? `Giọng ${genderLabel} — ${voiceMeta!.description}`
+    : `Giọng ${genderLabel}`;
+
   const data: RenderedSoData = {
     title: template.title,
     segments,
     durationMs: totalDurationMs,
-    voiceKey: voiceKey!,
+    voiceKey: voiceMeta!.voice_key,
+    priest: {
+      name: voiceMeta!.display_name,
+      role,
+      imageUrl: null, // DB chưa có avatar_url; sau này thêm xong wire vào đây
+    },
     lines: allLines,
   };
 

@@ -18,6 +18,11 @@ export interface RenderedSoData {
   }>;
   durationMs: number;
   voiceKey: string;
+  priest: {
+    name: string;
+    role: string;
+    imageUrl: string | null;
+  };
   lines: Array<{
     line_id: string;
     text: string;
@@ -28,13 +33,6 @@ export interface RenderedSoData {
 }
 
 const AUTO_INTERVAL_MS = 25000;
-
-// Mock priest — sau này map voiceKey → voice profile
-const MOCK_PRIEST = {
-  name: 'Thầy Thích Thiện',
-  role: 'Giọng Nam trầm — Miền Bắc',
-  imageUrl: null as string | null,
-};
 
 export function HanhLeClient({ data }: { data: RenderedSoData }) {
   const router = useRouter();
