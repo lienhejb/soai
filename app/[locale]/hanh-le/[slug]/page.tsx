@@ -28,13 +28,15 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
   if (!template) redirect('/vi/so');
 
   // Resolve voice: ưu tiên ?voice= từ query, fallback theo gender
-  let voiceMeta: {
-    voice_key: string;
-    provider_voice_id: string | null;
-    display_name: string;
-    description: string | null;
-    gender: 'male' | 'female';
-  } | null = null;
+  type VoiceMeta = {
+  voice_key: string;
+  provider_voice_id: string | null;
+  display_name: string;
+  description: string | null;
+  gender: 'male' | 'female';
+};
+
+let voiceMeta: VoiceMeta | null = null;
 
   if (voice) {
     const { data: vRow } = await supabase
@@ -44,7 +46,7 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
       .eq('is_active', true)
       .maybeSingle();
     if (vRow?.provider_voice_id) {
-      voiceMeta = vRow as typeof voiceMeta;
+      voiceMeta = vRow as VoiceMeta;
     }
   }
 
@@ -66,7 +68,7 @@ export default async function HanhLePage({ params, searchParams }: PageProps) {
     ) ?? voices?.[0];
 
     if (!fallback?.provider_voice_id) redirect(`/vi/so/${slug}`);
-    voiceMeta = fallback as typeof voiceMeta;
+    voiceMeta = fallback as VoiceMeta;
   }
 
   // Gọi prepareRenderedSo
