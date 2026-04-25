@@ -44,11 +44,15 @@ export default async function SoDetailPage({ params }: PageProps) {
     .map((s) => s.text)
     .join('\n\n');
 
-  const rendered = renderTemplate(fullText, {
-    owner_name: profile?.display_name || '[Tín chủ]',
-    address: profile?.address || '[Địa chỉ]',
-    ...getDateStringsForSo(),
-  });
+  const fullName = profile?.display_name || '';
+const familySurname = fullName.trim().split(/\s+/)[0] || 'Tín chủ';
+
+const rendered = renderTemplate(fullText, {
+  owner_name: fullName || '[Tín chủ]',
+  family_surname: familySurname,
+  address: profile?.address || '[Địa chỉ]',
+  ...getDateStringsForSo(),
+});
 
   // Fetch voices từ DB
   const { data: systemVoices } = await supabase

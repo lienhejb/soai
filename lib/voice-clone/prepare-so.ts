@@ -62,8 +62,12 @@ export async function prepareRenderedSo(
     .eq('id', user.id)
     .single();
 
-  const vars = {
-  owner_name: profile?.display_name || 'Tín chủ',
+  const fullName = profile?.display_name || '';
+const familySurname = fullName.trim().split(/\s+/)[0] || 'Tín chủ';
+
+const vars = {
+  owner_name: fullName || 'Tín chủ',
+  family_surname: familySurname,
   address: profile?.address || 'Địa chỉ không rõ',
   ...getDateStringsForSo(),
 };
