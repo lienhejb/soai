@@ -41,8 +41,7 @@ export function SoLibrary({ sos }: Props) {
 
 function SoCard({ so }: { so: UserSo }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  // TẠM: tất cả card mock đều là "đang cập nhật" cho tới khi có bảng user_sos thật
-  const isPending = true;
+  const isPending = false; // tất cả template đều click được — sẽ điều hướng sang /so/[slug]
 
   return (
     <div className="relative w-40 flex-shrink-0">
@@ -67,8 +66,8 @@ function SoCard({ so }: { so: UserSo }) {
 
         {isPending && (
           <div className="mt-2 text-[10px] italic text-stone-400">
-            đang cập nhật
-          </div>
+  {so.has_rendered ? 'Đã thỉnh' : 'Chưa thỉnh'}
+</div>
         )}
       </Link>
 

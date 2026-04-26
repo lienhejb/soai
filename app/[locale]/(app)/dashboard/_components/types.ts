@@ -33,9 +33,12 @@ export interface UpcomingEvent {
 }
 
 export interface UserSo {
-  user_so_id: string;
-  nickname: string;        // "Sớ Rằm cầu an"
+  user_so_id: string;       // = template.slug — dùng cho /so/[slug]
+  template_id: string;
+  nickname: string;          // = template.title
   event_type: EventType;
-  is_default: boolean;     // sớ hay dùng cho event_type này
-  updated_at: string;      // ISO date
+  is_default: boolean;       // = template.is_featured
+  has_rendered: boolean;     // user đã từng gen sớ này chưa
+  last_rendered_at: string | null;
+  updated_at: string;
 }

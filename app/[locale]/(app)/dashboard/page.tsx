@@ -1,31 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { DashboardClient } from './_components/DashboardClient';
 import { getTodayInfo, computeUpcomingEvents } from '@/lib/lunar';
-import type { UserSo } from './_components/types';
-
-const MOCK_USER_SOS: UserSo[] = [
-  {
-    user_so_id: 'van-khan-ram',
-    nickname: 'Sớ Rằm cầu an',
-    event_type: 'RAM',
-    is_default: true,
-    updated_at: new Date().toISOString(),
-  },
-  {
-    user_so_id: 'van-khan-mung-1',
-    nickname: 'Sớ Mùng 1',
-    event_type: 'MONG',
-    is_default: false,
-    updated_at: new Date().toISOString(),
-  },
-  {
-    user_so_id: 'van-khan-gio',
-    nickname: 'Sớ Giỗ Cha',
-    event_type: 'GIO',
-    is_default: false,
-    updated_at: new Date().toISOString(),
-  },
-];
+import type { UserSo, EventType } from './_components/types';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -45,6 +21,43 @@ export default async function DashboardPage() {
 
   const profile = profileRes.data;
   const people = peopleRes.data ?? [];
+  // Lấy toàn bộ templates active + count rendered của user
+const [templatesRes, renderedRes] = await Promise.all([
+  supabase
+    .from('templates')
+    .select('id, slug, title, purpose, is_featured, created_at')
+    .eq('locale', 'vi')
+    .eq('is_active', true)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false }),
+  supabase
+    .from('user_rendered_audio')
+    .select('template_id, created_at')
+    .eq('user_id', user!.id)
+    .order('created_at', { ascending: false }),
+]);
+
+// Map template_id → last_rendered_at
+const renderedMap = new Map<string, string>();
+for (const r of renderedRes.data ?? []) {
+  if (!renderedMap.has(r.template_id)) {
+    renderedMap.set(r.template_id, r.created_at);
+  }
+}
+
+const userSos: UserSo[] = (templatesRes.data ?? []).map((t) => {
+  const lastRendered = renderedMap.get(t.id) ?? null;
+  return {
+    user_so_id: t.slug,
+    template_id: t.id,
+    nickname: t.title,
+    event_type: purposeToEventType(t.purpose),
+    is_default: false,
+    has_rendered: lastRendered !== null,
+    last_rendered_at: lastRendered,
+    updated_at: lastRendered ?? t.created_at,
+  };
+});
 
   const today = getTodayInfo();
   const events = computeUpcomingEvents(people, 30);
@@ -86,7 +99,7 @@ export default async function DashboardPage() {
       heroEvent={heroEvent ?? null}
       otherEvents={otherEvents}
       availableTemplates={availableTemplates}
-      userSos={MOCK_USER_SOS}
+      userSos={userSos}
       initialProfile={{
         display_name: profile?.display_name || '',
         gender: profile?.gender ?? null,
@@ -95,4 +108,18 @@ export default async function DashboardPage() {
       }}
     />
   );
+}
+
+function purposeToEventType(purpose: string | null): EventType {
+  switch (purpose) {
+    case 'ram': return 'RAM';
+    case 'mung_mot': return 'MONG';
+    case 'gio': return 'GIO';
+    case 'tat_nien': return 'TAT_NIEN';
+    case 'cung_gia_tien': return 'CUNG_GIA_TIEN';
+    case 'le_tet': return 'LE_TET';
+    case 'khai_truong': return 'KHAI_TRUONG';
+    case 'nhap_trach': return 'NHAP_TRACH';
+    default: return 'KHAC';
+  }
 }
