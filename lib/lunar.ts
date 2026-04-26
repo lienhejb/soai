@@ -1,5 +1,5 @@
 import { Lunar, Solar } from 'lunar-javascript';
-import { getQuanByZhiIndex, type QuanCaiQuan } from '@/lib/lunar/quan-cai-quan';
+import { getQuanByZhiIndex, type QuanCaiQuan } from '@/lib/quan-cai-quan';
 
 export interface DateInfo {
   solar: string;
