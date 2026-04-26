@@ -1,4 +1,5 @@
 import { Lunar, Solar } from 'lunar-javascript';
+import { getQuanByZhiIndex, type QuanCaiQuan } from '@/lib/lunar/quan-cai-quan';
 
 export interface DateInfo {
   solar: string;
@@ -351,4 +352,15 @@ export function getDateStringsForSo(date: Date = new Date()): {
     solar_date_full: getSolarDateFullString(date),
     lunar_date_full: getLunarDateFullString(date),
   };
+}
+
+/**
+ * Lấy quan cai quản của năm âm lịch tại 1 ngày dương lịch cụ thể.
+ * Mặc định: hôm nay.
+ */
+export function getQuanCaiQuanAtDate(date: Date = new Date()): QuanCaiQuan {
+  const lunar = Solar.fromDate(date).getLunar();
+  // lunar-javascript expose getYearZhiIndex() (0=Tý, ..., 11=Hợi)
+  const zhiIndex = lunar.getYearZhiIndex();
+  return getQuanByZhiIndex(zhiIndex);
 }

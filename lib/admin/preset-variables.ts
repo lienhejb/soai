@@ -13,7 +13,7 @@ export type AutoFromProfile =
   | 'gender'
   | 'display_name_first_word';
 
-export type AutoCompute = 'lunar_full' | 'lunar_date_from_solar' | 'solar_full';
+export type AutoCompute = 'lunar_full' | 'lunar_date_from_solar' | 'solar_full' | 'quan_cai_quan';
 
 export interface RequiredVariable {
   /** Key trong template, dùng cho substitution {{key}}. snake_case. */
@@ -108,6 +108,30 @@ export const PRESET_VARIABLES: RequiredVariable[] = [
     required: false,
     auto_compute: 'solar_full',
     helper_text: 'Tự động: "ngày 25 tháng 4 năm 2026" — từ ngày user chọn làm lễ',
+  },
+  {
+    key: 'quan_hanh_khien',
+    label: 'Quan Hành khiển (theo năm)',
+    type: 'text',
+    required: false,
+    auto_compute: 'quan_cai_quan',
+    helper_text: 'Tự tra theo chi năm âm lịch. VD: năm Bính Ngọ 2026 → "Tần"',
+  },
+  {
+    key: 'quan_hanh_binh',
+    label: 'Quan Hành binh (theo năm)',
+    type: 'text',
+    required: false,
+    auto_compute: 'quan_cai_quan',
+    helper_text: 'Tự tra theo chi năm âm lịch. VD: năm Bính Ngọ 2026 → "Thiên Mao"',
+  },
+  {
+    key: 'quan_phan_quan',
+    label: 'Quan Phán quan (theo năm)',
+    type: 'text',
+    required: false,
+    auto_compute: 'quan_cai_quan',
+    helper_text: 'Tự tra theo chi năm âm lịch. VD: năm Bính Ngọ 2026 → "Ngọc"',
   },
 
   // === Auto default ===
