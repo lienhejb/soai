@@ -321,6 +321,20 @@ export function isSameDay(a: Date, b: Date): boolean {
 }
 
 /**
+ * Format ngày dương → chuỗi âm lịch đầy đủ tự nhiên cho văn khấn TTS
+ * Ví dụ: "ngày Rằm tháng Giêng năm Bính Ngọ"
+ *        "ngày mùng Một tháng Bảy năm Giáp Thìn"
+ */
+export function getLunarDateFullString(date: Date = new Date()): string {
+  const lunar = Solar.fromDate(date).getLunar();
+  const day = lunar.getDay();
+  const month = lunar.getMonth();
+  const yearGanZhi = ganZhiToVietnamese(lunar.getYearInGanZhi());
+
+  return `ngày ${formatLunarDay(day)} tháng ${formatLunarMonth(month)} năm ${yearGanZhi}`;
+}
+
+/**
  * Format ngày dương → "ngày 25 tháng 4 năm 2026"
  * Dùng cho biến {{solar_date_full}} trong template
  */
