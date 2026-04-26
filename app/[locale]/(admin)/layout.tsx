@@ -34,7 +34,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 Dashboard
               </Link>
+              
               <Link
+  href="/admin/users"
+  className="rounded-md px-3 py-1.5 text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+>
+  Người dùng
+</Link>
+<Link
                 href="/admin/templates"
                 className="rounded-md px-3 py-1.5 text-stone-600 hover:bg-stone-100 hover:text-stone-900"
               >
