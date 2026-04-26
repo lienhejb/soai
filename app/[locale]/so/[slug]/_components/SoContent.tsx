@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { loadDraft } from '@/lib/draft';
-import { getDateStringsForSo } from '@/lib/lunar';
+import { getDateStringsForSo, getQuanCaiQuanAtDate } from '@/lib/lunar';
 
 interface Props {
   rawText: string;       // template gốc, chưa render var
@@ -23,13 +23,17 @@ export function SoContent({ rawText, serverRendered, isGuest }: Props) {
     if (!ownerName && !address) return; // draft rỗng → giữ placeholder
 
     const familySurname = (ownerName || '').split(/\s+/)[0] || 'Tín chủ';
-    const overridden = renderTemplate(rawText, {
-      owner_name: ownerName || 'Tín chủ',
-      family_surname: familySurname,
-      address: address || 'Địa chỉ không rõ',
-      ...getDateStringsForSo(),
-    });
-    setText(overridden);
+const quan = getQuanCaiQuanAtDate();
+const overridden = renderTemplate(rawText, {
+  owner_name: ownerName || 'Tín chủ',
+  family_surname: familySurname,
+  address: address || 'Địa chỉ không rõ',
+  ...getDateStringsForSo(),
+  quan_hanh_khien: quan.hanh_khien,
+  quan_hanh_binh: quan.hanh_binh,
+  quan_phan_quan: quan.phan_quan,
+});
+setText(overridden);
   }, [isGuest, rawText]);
 
   return (

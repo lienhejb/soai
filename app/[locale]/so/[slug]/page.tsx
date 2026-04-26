@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
-import { getDateStringsForSo } from '@/lib/lunar';
+import { getDateStringsForSo, getQuanCaiQuanAtDate } from '@/lib/lunar';
 import { GUEST_PROFILE } from '@/lib/guest';
 
 export const dynamic = 'force-dynamic';
@@ -103,12 +103,16 @@ export default async function SoDetailPage({ params }: PageProps) {
     .join('\n\n');
 
   const familySurname = displayName.trim().split(/\s+/)[0] || 'Tín chủ';
+  const quan = getQuanCaiQuanAtDate();
 
   const rendered = renderTemplate(fullText, {
     owner_name: displayName || '[Tín chủ]',
     family_surname: familySurname,
     address: address || '[Địa chỉ]',
     ...getDateStringsForSo(),
+    quan_hanh_khien: quan.hanh_khien,
+    quan_hanh_binh: quan.hanh_binh,
+    quan_phan_quan: quan.phan_quan,
   });
 
   // Fetch voices từ DB
