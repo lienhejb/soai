@@ -53,21 +53,6 @@ interface PersonInput {
 }
 
 /**
- * Format ngày dương → chuỗi âm lịch đầy đủ tự nhiên cho văn khấn TTS
- * Ví dụ: "ngày Rằm tháng Giêng năm Bính Ngọ"
- *        "ngày mùng Một tháng Bảy năm Giáp Thìn"
- *        "ngày mùng Tám tháng Chạp năm Quý Mão"
- */
-export function getLunarDateFullString(date: Date = new Date()): string {
-  const lunar = Solar.fromDate(date).getLunar();
-  const day = lunar.getDay();
-  const month = lunar.getMonth();
-  const yearGanZhi = ganZhiToVietnamese(lunar.getYearInGanZhi());
-
-  return `ngày ${formatLunarDay(day)} tháng ${formatLunarMonth(month)} năm ${yearGanZhi}`;
-}
-
-/**
  * Convert Can-Chi từ Hán tự (丙午) sang Việt latinh (Bính Ngọ)
  * Thư viện lunar-javascript trả về 2 ký tự Hán: [Can][Chi]
  */
@@ -82,10 +67,22 @@ function ganZhiToVietnamese(ganZhi: string): string {
     '戌': 'Tuất', '亥': 'Hợi',
   };
 
-  if (ganZhi.length !== 2) return ganZhi; // fallback
+  if (ganZhi.length !== 2) return ganZhi;
   const canVi = can[ganZhi[0]] ?? ganZhi[0];
   const chiVi = chi[ganZhi[1]] ?? ganZhi[1];
   return `${canVi} ${chiVi}`;
+}
+
+/**
+ * Convert ký tự Chi (Hán) → index 0..11.
+ * 子=0 Tý, 丑=1 Sửu, ..., 亥=11 Hợi
+ */
+function zhiCharToIndex(zhi: string): number {
+  const map: Record<string, number> = {
+    '子': 0, '丑': 1, '寅': 2, '卯': 3, '辰': 4, '巳': 5,
+    '午': 6, '未': 7, '申': 8, '酉': 9, '戌': 10, '亥': 11,
+  };
+  return map[zhi] ?? 0;
 }
 
 /**
@@ -360,7 +357,7 @@ export function getDateStringsForSo(date: Date = new Date()): {
  */
 export function getQuanCaiQuanAtDate(date: Date = new Date()): QuanCaiQuan {
   const lunar = Solar.fromDate(date).getLunar();
-  // lunar-javascript expose getYearZhiIndex() (0=Tý, ..., 11=Hợi)
-  const zhiIndex = lunar.getYearZhiIndex();
+  const ganZhi = lunar.getYearInGanZhi(); // VD: "丙午"
+  const zhiIndex = zhiCharToIndex(ganZhi[1]);
   return getQuanByZhiIndex(zhiIndex);
 }
