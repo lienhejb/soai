@@ -28,8 +28,8 @@ interface Props {
 
 type RenderStatus = 'idle' | 'preparing' | 'merging' | 'uploading' | 'done' | 'error';
 
-const PLAY_PHRASES = ['Thỉnh thầy...', 'Chỉnh y phục...', 'Soạn sớ...', 'Chuẩn bị xướng...'];
-const HANH_LE_PHRASES = ['Sắp án gian...', 'Bày hương hoa...', 'Thắp tâm hương...', 'Đang tịnh tâm...'];
+const PLAY_PHRASES = ['Thỉnh thầy...', 'Chỉnh y phục...', 'Soạn sớ...', 'Trải giấy...', 'Mài mực...', 'Phẩy bút lông...', 'Chuẩn bị xướng...'];
+const HANH_LE_PHRASES = ['Sắp án gian...', 'Trải khăn đỏ...', 'Bày hương hoa...','Sắp trà quả...', 'Bày ngũ quả...','Rót rượu, châm trà...','Thắp tâm hương...', 'Đốt trầm thơm...','Đang tịnh tâm...'];
 
 export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId, isGuest }: Props) {
   const router = useRouter();
@@ -66,6 +66,14 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId, 
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [menuOpen]);
+
+  const shouldAutoPlayRef = useRef(false);
+useEffect(() => {
+  if (audioUrl && shouldAutoPlayRef.current) {
+    shouldAutoPlayRef.current = false;
+    audioRef.current?.play().then(() => setPlaying(true)).catch(console.error);
+  }
+}, [audioUrl]);
 
   async function handlePlay() {
   if (playing) {
