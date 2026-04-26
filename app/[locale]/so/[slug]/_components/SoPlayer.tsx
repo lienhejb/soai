@@ -1,7 +1,8 @@
 'use client';
 
 import { loadDraft } from '@/lib/draft';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLoadingPhrases } from '@/lib/hooks/useLoadingPhrases';
 import { useRouter } from '@/i18n/navigation';
 import { prepareRenderedSo } from '@/lib/voice-clone/prepare-so';
 import { finalizeRenderedSo } from '@/lib/voice-clone/upload-rendered';
@@ -27,6 +28,9 @@ interface Props {
 
 type RenderStatus = 'idle' | 'preparing' | 'merging' | 'uploading' | 'done' | 'error';
 
+const PLAY_PHRASES = ['Thỉnh thầy...', 'Chỉnh y phục...', 'Soạn sớ...', 'Chuẩn bị xướng...'];
+const HANH_LE_PHRASES = ['Sắp án gian...', 'Bày hương hoa...', 'Thắp tâm hương...', 'Đang tịnh tâm...'];
+
 export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId, isGuest }: Props) {
   const router = useRouter();
 
@@ -37,12 +41,31 @@ export function SoPlayer({ templateSlug, templateTitle, voices, defaultVoiceId, 
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [renderStatus, setRenderStatus] = useState<RenderStatus>('idle');
   const [renderError, setRenderError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const currentVoice = voices.find((v) => v.id === voiceId)!;
+
+  const renderInProgress =
+    renderStatus === 'preparing' || renderStatus === 'merging' || renderStatus === 'uploading';
+
+  const playPhrase = useLoadingPhrases(PLAY_PHRASES, loading);
+  const hanhLePhrase = useLoadingPhrases(HANH_LE_PHRASES, renderInProgress);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [menuOpen]);
 
   async function handlePlay() {
   if (playing) {
@@ -195,8 +218,6 @@ async function prepareAndMergeForListen(): Promise<string | null> {
     setTimeout(() => setToast(null), 2500);
   }
 
-  const renderInProgress = renderStatus === 'preparing' || renderStatus === 'merging' || renderStatus === 'uploading';
-
   return (
     <div className="relative">
       {/* Voice picker */}
@@ -253,38 +274,81 @@ async function prepareAndMergeForListen(): Promise<string | null> {
         />
       )}
 
-      <div className="grid grid-cols-3 gap-2">
+      {/* Hàng nút action: NGHE (75%) + Menu ba chấm (25%) */}
+<div className="flex gap-2">
+  {/* Nút NGHE — flex-grow chiếm phần lớn */}
+  <button
+    onClick={handlePlay}
+    disabled={loading}
+    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 py-4 font-bold tracking-widest text-white shadow-lg shadow-amber-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40 disabled:opacity-90"
+  >
+    {loading ? (
+      <>
+        <Spinner />
+        <span className="text-sm font-medium tracking-normal">{playPhrase}</span>
+      </>
+    ) : playing ? (
+      <>
+        <span>❚❚</span>
+        <span className="text-sm">DỪNG</span>
+      </>
+    ) : (
+      <>
+        <span>▶</span>
+        <span className="text-sm">NGHE</span>
+      </>
+    )}
+  </button>
+
+  {/* Menu ba chấm */}
+  <div ref={menuRef} className="relative">
+    <button
+      onClick={() => setMenuOpen((v) => !v)}
+      aria-label="Tùy chọn khác"
+      aria-expanded={menuOpen}
+      className="flex h-full w-14 items-center justify-center rounded-xl border border-stone-300 text-stone-600 transition hover:border-amber-500 hover:text-amber-600"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="5" cy="12" r="2" />
+        <circle cx="12" cy="12" r="2" />
+        <circle cx="19" cy="12" r="2" />
+      </svg>
+    </button>
+
+    {menuOpen && (
+      <div className="absolute right-0 top-full z-20 mt-2 w-48 overflow-hidden rounded-xl border border-amber-200 bg-stone-50 shadow-xl">
         <button
-          onClick={handlePlay}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 py-4 font-bold tracking-widest text-white shadow-lg shadow-amber-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40 disabled:opacity-60"
+          onClick={() => {
+            setMenuOpen(false);
+            handleDownload();
+          }}
+          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 transition hover:bg-amber-50"
         >
-          {loading ? <><Spinner /><span className="text-sm">TẢI</span></> :
-            playing ? <><span>❚❚</span><span className="text-sm">DỪNG</span></> :
-            <><span>▶</span><span className="text-sm">NGHE</span></>}
-        </button>
-        <button
-          onClick={handleDownload}
-          className="flex items-center justify-center gap-1 rounded-xl border border-stone-300 py-4 font-medium text-stone-700 transition hover:border-amber-500 hover:text-amber-600"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" />
           </svg>
-          <span className="text-sm">Tải</span>
+          <span>Tải bản ghi</span>
         </button>
+        <div className="h-px bg-amber-100" />
         <button
-          onClick={handleShare}
-          className="flex items-center justify-center gap-1 rounded-xl border border-stone-300 py-4 font-medium text-stone-700 transition hover:border-amber-500 hover:text-amber-600"
+          onClick={() => {
+            setMenuOpen(false);
+            handleShare();
+          }}
+          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-stone-700 transition hover:bg-amber-50"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="18" cy="5" r="3" />
             <circle cx="6" cy="12" r="3" />
             <circle cx="18" cy="19" r="3" />
             <path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98" />
           </svg>
-          <span className="text-sm">Chia sẻ</span>
+          <span>Chia sẻ sớ</span>
         </button>
       </div>
+    )}
+  </div>
+</div>
 
       {/* Nút Vào chế độ Hành Lễ */}
       <button
@@ -295,14 +359,19 @@ async function prepareAndMergeForListen(): Promise<string | null> {
         {renderStatus === 'preparing' && <><Spinner /><span>ĐANG CHUẨN BỊ...</span></>}
         {renderStatus === 'merging' && <><Spinner /><span>ĐANG GHÉP ÂM THANH...</span></>}
         {renderStatus === 'uploading' && <><Spinner /><span>ĐANG LƯU...</span></>}
-        {!renderInProgress && (
-          <>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 3l9 9-9 9M3 12h18" />
-            </svg>
-            <span>VÀO CHẾ ĐỘ HÀNH LỄ</span>
-          </>
-        )}
+        {renderInProgress ? (
+  <>
+    <Spinner />
+    <span>{hanhLePhrase}</span>
+  </>
+) : (
+  <>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3l9 9-9 9M3 12h18" />
+    </svg>
+    <span>VÀO CHẾ ĐỘ HÀNH LỄ</span>
+  </>
+)}
       </button>
 
       {renderStatus === 'error' && renderError && (
@@ -341,16 +410,4 @@ function Spinner() {
       <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
-}
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
 }
