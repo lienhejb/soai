@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Voice } from './types';
+import type { Voice } from '@/components/ancestor/types';
 
 interface Props {
   voices: Voice[];
