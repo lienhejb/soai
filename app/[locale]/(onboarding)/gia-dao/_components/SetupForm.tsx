@@ -6,7 +6,7 @@ import { useRouter } from '@/i18n/navigation';
 import { VoiceSelector } from './VoiceSelector';
 import { AncestorList } from './AncestorList';
 import { loadDraft, saveDraft } from '@/lib/draft';
-import type { Voice, Ancestor } from './types';
+import type { Voice, Ancestor } from '@/components/ancestor/types';
 
 interface Props {
   voices: Voice[];
