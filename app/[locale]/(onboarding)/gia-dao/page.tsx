@@ -1,5 +1,5 @@
 import { SetupForm } from './_components/SetupForm';
-import type { Voice } from './_components/types';
+import type { Voice } from '@/components/ancestor/types';
 import { LoginButton } from './_components/LoginButton';
 
 // Mock data - sẽ thay bằng Supabase query
