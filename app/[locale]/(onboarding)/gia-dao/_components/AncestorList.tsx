@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { AncestorModal } from './AncestorModal';
-import type { Ancestor } from './types';
+import { AncestorModal } from '@/components/ancestor/AncestorModal';
+import type { Ancestor } from '@/components/ancestor/types';
 
 interface Props {
   ancestors: Ancestor[];

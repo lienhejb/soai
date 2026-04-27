@@ -1,3 +1,4 @@
+//app\[locale]\(onboarding)\gia-dao\_components/types.ts
 // Single Source of Truth — đồng bộ với Supabase schema
 
 export type VoiceGender = 'male' | 'female';
