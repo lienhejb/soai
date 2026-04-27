@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
-import { getDateStringsForSo, getQuanCaiQuanAtDate } from '@/lib/lunar';
+// đã xóa — dùng render-vars thay thế
 import { GUEST_PROFILE } from '@/lib/guest';
 
 export const dynamic = 'force-dynamic';
@@ -61,6 +61,7 @@ export default async function SoDetailPage({ params }: PageProps) {
     .select(`
       id,
       title,
+      required_variables,
       template_segments (
         order_index,
         segment_type,
@@ -102,18 +103,21 @@ export default async function SoDetailPage({ params }: PageProps) {
     .map((s) => s.text)
     .join('\n\n');
 
-  const familySurname = displayName.trim().split(/\s+/)[0] || 'Tín chủ';
-  const quan = getQuanCaiQuanAtDate();
+  const requiredVars = (template as any).required_variables ?? [];
 
-  const rendered = renderTemplate(fullText, {
-    owner_name: displayName || '[Tín chủ]',
-    family_surname: familySurname,
-    address: address || '[Địa chỉ]',
-    ...getDateStringsForSo(),
-    quan_hanh_khien: quan.hanh_khien,
-    quan_hanh_binh: quan.hanh_binh,
-    quan_phan_quan: quan.phan_quan,
+  const { renderVariables, substituteText } = await import('@/lib/admin/render-vars');
+  const resolvedVars = renderVariables({
+    requiredVars,
+    userInput: {},
+    profile: isGuest ? null : { display_name: displayName, address, gender },
+    eventDate: new Date(),
   });
+
+  const rendered = substituteText(fullText, resolvedVars, { keepUnknown: true });
+
+  const missingVars = requiredVars.filter(
+    (v: any) => v.required && !resolvedVars[v.key]
+  );
 
   // Fetch voices từ DB
   const { data: systemVoices } = await supabase
@@ -168,15 +172,12 @@ export default async function SoDetailPage({ params }: PageProps) {
         <SoContent
           rawText={fullText}
           serverRendered={rendered}
-          isGuest={isGuest}
+        isGuest={isGuest}
+        resolvedVars={resolvedVars}
+        missingVars={missingVars}
+        rawText={fullText}
         />
       </div>
     </div>
   );
-}
-
-function renderTemplate(content: string, vars: Record<string, string>): string {
-  return content
-    .replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? `[${k}]`)
-    .replace(/\n{3,}/g, '\n\n');
 }
