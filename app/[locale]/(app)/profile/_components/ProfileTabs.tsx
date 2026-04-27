@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { AncestorList } from '@/app/[locale]/(onboarding)/gia-dao/_components/AncestorList';
+import type { Ancestor } from '@/components/ancestor/types';
 
 const HOUSE_DIRECTIONS = ['Đông', 'Tây', 'Nam', 'Bắc', 'Đông Nam', 'Đông Bắc', 'Tây Nam', 'Tây Bắc'];
 
@@ -39,6 +41,40 @@ export function ProfileTabs({
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [ancestors, setAncestors] = useState<Ancestor[]>(
+    people.map((p) => ({
+      id: p.id,
+      full_name: p.full_name,
+      role: p.relationship as Ancestor['role'],
+      death_date: p.death_date ?? '',
+      is_lunar: p.is_lunar_death ?? true,
+      is_leap_month: false,
+    }))
+  );
+
+  async function handleAddAncestor(data: Omit<Ancestor, 'id'>) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: inserted } = await supabase.from('people').insert({
+      user_id: user!.id,
+      full_name: data.full_name,
+      relationship: data.role,
+      death_date: data.death_date,
+      is_lunar_death: data.is_lunar,
+      is_leap_month_death: data.is_leap_month,
+      status: 'deceased',
+    }).select('id').single();
+    if (inserted) {
+      setAncestors((prev) => [...prev, { ...data, id: inserted.id }]);
+    }
+  }
+
+  async function handleRemoveAncestor(id: string) {
+    const supabase = createClient();
+    await supabase.from('people').delete().eq('id', id);
+    setAncestors((prev) => prev.filter((a) => a.id !== id));
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -85,26 +121,17 @@ export function ProfileTabs({
           <section className="mb-8">
             <div className="mb-4 flex items-baseline justify-between">
               <h2 className="font-serif text-lg text-stone-800">Gia Tiên</h2>
-              <span className="text-sm text-stone-500">{people.length} người</span>
+              <span className="text-sm text-stone-500">{ancestors.length} người</span>
             </div>
-            {people.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500">
-                Chưa có Hương linh nào
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {people.map((p) => (
-                  <div key={p.id} className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-                    <div className="font-serif text-base text-stone-800">
-                      {p.relationship} {p.full_name}
-                    </div>
-                    <div className="mt-1 text-xs text-stone-500">
-                      {p.death_date && `${p.is_lunar_death ? 'Âm lịch' : 'Dương lịch'} ${formatDate(p.death_date)}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <AncestorList
+              ancestors={ancestors}
+              onChange={(list) => {
+                const added = list.find((a) => !ancestors.find((x) => x.id === a.id));
+                const removed = ancestors.find((a) => !list.find((x) => x.id === a.id));
+                if (added) handleAddAncestor(added);
+                if (removed) handleRemoveAncestor(removed.id);
+              }}
+            />
           </section>
         </>
       )}
