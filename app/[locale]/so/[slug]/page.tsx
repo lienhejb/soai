@@ -175,7 +175,6 @@ export default async function SoDetailPage({ params }: PageProps) {
         isGuest={isGuest}
         resolvedVars={resolvedVars}
         missingVars={missingVars}
-        rawText={fullText}
         />
       </div>
     </div>
