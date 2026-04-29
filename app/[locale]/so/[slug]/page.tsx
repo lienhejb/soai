@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
-import { SoHeader } from './_components/SoHeader';
 // đã xóa — dùng render-vars thay thế
 import { GUEST_PROFILE } from '@/lib/guest';
 
