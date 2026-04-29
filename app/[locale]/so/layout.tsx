@@ -1,11 +1,20 @@
-'use client';
-
-import { useState } from 'react';
 import { Link } from '@/i18n/navigation';
-import { AuthModal } from '@/app/[locale]/_components/AuthModal';
+import { createClient } from '@/lib/supabase/server';
+import { SoLayoutHeaderActions } from './_components/SoLayoutHeaderActions';
 
-export default function SoPublicLayout({ children }: { children: React.ReactNode }) {
-  const [authOpen, setAuthOpen] = useState(false);
+export default async function SoPublicLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let displayName: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .single();
+    displayName = profile?.display_name ?? null;
+  }
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[var(--bg-paper)]">
@@ -18,19 +27,14 @@ export default function SoPublicLayout({ children }: { children: React.ReactNode
             </span>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setAuthOpen(true)}
-            className="rounded-full border border-[var(--gold-soft)] px-4 py-1.5 text-sm font-medium text-[var(--gold-deep)] transition active:bg-[var(--gold)]/10"
-          >
-            Đăng nhập
-          </button>
+          <SoLayoutHeaderActions
+            isLoggedIn={!!user}
+            displayName={displayName}
+          />
         </div>
       </header>
 
       <main className="pb-12">{children}</main>
-
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }
