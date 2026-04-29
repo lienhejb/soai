@@ -124,6 +124,9 @@ export async function prepareRenderedSo(
     ...getDateStringsForSo(),
   };
 
+  console.log('[prepare-so] vars built:', JSON.stringify(vars, null, 2));
+  console.log('[prepare-so] family_surname value:', vars.family_surname);
+
   const variablesHash = hashVariables(vars);
 
   // Fetch segments TRƯỚC để tính fingerprint
