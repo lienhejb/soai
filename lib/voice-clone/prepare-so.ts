@@ -6,6 +6,8 @@ import { ttsWithTimestamps, type LineWithTiming } from '@/lib/elevenlabs/tts-wit
 import { createHash } from 'crypto';
 import { getDateStringsForSo } from '@/lib/lunar';
 import { getGuestUserId, GUEST_PROFILE } from '@/lib/guest';
+import { renderVariables } from '@/lib/admin/render-vars';
+import { getUserVariables } from '@/lib/profile/user-variables';
 
 const STATIC_BUCKET = 'audio-static';
 const RENDERED_BUCKET = 'audio-rendered';
@@ -60,17 +62,25 @@ export async function prepareRenderedSo(
   const isGuest = !user;
 
   const { data: template } = await supabase
-    .from('templates')
-    .select('id, slug')
-    .eq('slug', templateSlug)
+  .from('templates')
+  .select('id, slug, required_variables')
+  .eq('slug', templateSlug)
     .eq('locale', 'vi')
     .single();
   if (!template) return { ok: false, error: 'Template không tồn tại' };
 
   // Guest: ưu tiên draft override (data form vừa nhập), fallback GUEST_PROFILE
-  // User: query profile thật
+  // User: query profile đầy đủ (cho render-vars dùng)
   let displayName: string;
   let address: string;
+  let fullProfile: {
+    display_name: string | null;
+    address: string | null;
+    ceremony_address: string | null;
+    birth_year: number | null;
+    gender: string | null;
+  } | null = null;
+
   if (isGuest) {
     if (guestVarsOverride && (guestVarsOverride.owner_name?.trim() || guestVarsOverride.address?.trim())) {
       displayName = guestVarsOverride.owner_name?.trim() || GUEST_PROFILE.display_name;
@@ -82,19 +92,35 @@ export async function prepareRenderedSo(
   } else {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('display_name, address')
+      .select('display_name, address, ceremony_address, birth_year, gender')
       .eq('id', userId)
       .single();
     displayName = profile?.display_name || '';
     address = profile?.address || 'Địa chỉ không rõ';
+    fullProfile = profile ?? null;
   }
 
   const familySurname = displayName.trim().split(/\s+/)[0] || 'Tín chủ';
 
+  // Lookup user_variables (chỉ user đã login). Guest không có biến lưu.
+  const userVariables = isGuest ? null : await getUserVariables();
+
+  // Resolve toàn bộ biến theo required_variables của template:
+  // - auto_from_profile (display_name, address, ceremony_address, birth_year...)
+  // - auto_compute (lunar_full, solar_full)
+  // - lookup user_variables (nguoi_mat, mo_tang, chuc_danh_nguoi_mat, ngay_mat_lunar...)
+  const requiredVars = (template.required_variables ?? []) as Parameters<typeof renderVariables>[0]['requiredVars'];
+  const resolvedVars = renderVariables({
+    requiredVars,
+    userInput: {}, // NGHE từ data đã lưu, không có form input runtime
+    profile: fullProfile,
+    userVariables,
+  });
+
   const vars = {
-    owner_name: displayName || 'Tín chủ',
+    ...resolvedVars,
+    // Legacy biến không nằm trong required_variables nhưng có thể dùng trong segments cũ
     family_surname: familySurname,
-    address,
     ...getDateStringsForSo(),
   };
 
