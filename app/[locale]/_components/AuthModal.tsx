@@ -52,29 +52,29 @@ export function AuthModal({ open, onClose }: Props) {
   }
 
   async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    if (token.length !== 6) {
-      setError('Mã OTP gồm 6 chữ số');
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    const draft = loadDraft();
-    const isEmptyDraft = !draft || (
-  !draft.owner_name?.trim() 
-  && !draft.address?.trim() 
-  && (draft.ancestors?.length ?? 0) === 0
-);
-const res = await verifyOtp(email, token, isEmptyDraft ? null : draft);
-    setLoading(false);
-    if (!res.ok) {
-      setError(res.error || 'Mã không đúng');
-      return;
-    }
-    clearDraft();
-    router.push('/dashboard');
-    router.refresh();
+  e.preventDefault();
+  if (token.length !== 6) {
+    setError('Mã OTP gồm 6 chữ số');
+    return;
   }
+  setError(null);
+  setLoading(true);
+  const draft = loadDraft();
+  const isEmptyDraft = !draft || (
+    !draft.owner_name?.trim() 
+    && !draft.address?.trim() 
+    && (draft.ancestors?.length ?? 0) === 0
+  );
+  const res = await verifyOtp(email, token, isEmptyDraft ? null : draft);
+  if (!res.ok) {
+    setLoading(false);
+    setError(res.error || 'Mã không đúng');
+    return;
+  }
+  clearDraft();
+  router.push('/dashboard');
+  router.refresh();
+}
 
   if (!open) return null;
 
@@ -272,7 +272,8 @@ function OtpStep({
           placeholder="123456"
           required
           autoFocus
-          className="w-full rounded-xl border border-stone-200 bg-white py-4 text-center font-serif text-3xl tracking-[0.5em] text-stone-800 placeholder:text-stone-300 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition"
+          disabled={loading}
+className="w-full rounded-xl border border-stone-200 bg-white py-4 text-center font-serif text-3xl tracking-[0.5em] text-stone-800 placeholder:text-stone-300 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
         />
 
         {error && (
@@ -280,20 +281,28 @@ function OtpStep({
         )}
 
         <button
-          type="submit"
-          disabled={loading || token.length !== 6}
-          className="w-full rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 py-3 font-bold tracking-widest text-white shadow-lg shadow-amber-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40 disabled:cursor-not-allowed disabled:bg-none disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none disabled:translate-y-0"
-        >
-          {loading ? 'ĐANG XÁC MINH...' : 'XÁC MINH'}
-        </button>
+  type="submit"
+  disabled={loading || token.length !== 6}
+  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 py-3 font-bold tracking-widest text-white shadow-lg shadow-amber-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40 disabled:cursor-not-allowed disabled:bg-none disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none disabled:translate-y-0"
+>
+  {loading && (
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  )}
+  {loading ? 'ĐANG XÁC MINH...' : 'XÁC MINH'}
+</button>
 
-        <button
-          type="button"
-          onClick={onBack}
-          className="w-full text-sm text-stone-500 hover:text-stone-800 transition"
-        >
-          ← Đổi email khác
-        </button>
+        {!loading && (
+  <button
+    type="button"
+    onClick={onBack}
+    className="w-full text-sm text-stone-500 hover:text-stone-800 transition"
+  >
+    ← Đổi email khác
+  </button>
+)}
       </form>
     </>
   );
