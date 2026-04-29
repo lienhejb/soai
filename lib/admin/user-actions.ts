@@ -77,12 +77,15 @@ export async function listUsersWithStats(): Promise<AdminUserRow[]> {
   const supabase = await assertAdmin();
 
   const { data, error } = await supabase
-    .from('admin_users_view')
-    .select('id, email, display_name, phone, gender, birth_year, role, created_at, last_sign_in_at, last_active_at, so_count, voice_count, dynamic_count')
-    .order('created_at', { ascending: false });
+    .rpc('admin_get_users_with_stats');
+
+  // Sort client-side vì RPC không hỗ trợ .order() trực tiếp
+  const sorted = (data ?? []).sort((a: any, b: any) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   if (error) throw new Error(`listUsersWithStats: ${error.message}`);
-  return (data ?? []) as AdminUserRow[];
+  return sorted as AdminUserRow[];
 }
 
 /**
@@ -117,11 +120,10 @@ export async function getAdminUserStats(): Promise<AdminUserStats> {
 export async function getUserDetail(userId: string): Promise<AdminUserDetail> {
   const supabase = await assertAdmin();
 
-  const { data: row, error: rowErr } = await supabase
-    .from('admin_users_view')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  const { data: rows, error: rowErr } = await supabase
+    .rpc('admin_get_user_by_id', { target_user_id: userId });
+  
+  const row = rows?.[0];
 
   if (rowErr) throw new Error(`getUserDetail (view): ${rowErr.message}`);
   if (!row) throw new Error('Không tìm thấy user');
