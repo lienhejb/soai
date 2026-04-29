@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { updateMyProfilePartial } from '@/lib/profile/actions';
 
 interface MissingVar {
   key: string;
@@ -96,24 +96,20 @@ export function SoContent({
   }, []);
 
   async function handleSubmit() {
-    setSaving(true);
-    const profileUpdates: Record<string, string> = {};
-    if (form['address']) profileUpdates['address'] = form['address'];
-    if (form['ceremony_address']) profileUpdates['ceremony_address'] = form['ceremony_address'];
-    if (form['owner_name']) profileUpdates['display_name'] = form['owner_name'];
-
-    if (Object.keys(profileUpdates).length > 0 && !isGuest) {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('profiles').update(profileUpdates).eq('id', user.id);
-      }
-    }
-
-    rerender(form);
-    setSaving(false);
-    setShowModal(false);
+  setSaving(true);
+  
+  if (!isGuest) {
+    await updateMyProfilePartial({
+      display_name: form['owner_name'],
+      address: form['address'],
+      ceremony_address: form['ceremony_address'],
+    });
   }
+
+  rerender(form);
+  setSaving(false);
+  setShowModal(false);
+}
 
   function handleCloseRequest() {
     // Nếu còn biến required chưa nhập → confirm
