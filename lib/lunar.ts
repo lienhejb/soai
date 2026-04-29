@@ -375,3 +375,41 @@ export function getQuanCaiQuanAtDate(date: Date = new Date()): QuanCaiQuan {
   const zhiIndex = zhiCharToIndex(ganZhi[1]);
   return getQuanByZhiIndex(zhiIndex);
 }
+
+/**
+ * Heuristic: biến date có phải là "ngày sinh" không?
+ * Dùng để mặc định bỏ tick "đọc kèm âm lịch".
+ */
+export function isBirthDateKey(key: string): boolean {
+  return /sinh|birth/i.test(key);
+}
+
+/**
+ * Format ngày dương → cụm string đọc trong văn khấn.
+ * showLunar=true → "ngày 22 tháng 2 năm 1944 dương lịch (tức ngày 27 tháng Giêng năm Giáp Thân âm lịch)"
+ * showLunar=false → "ngày 22 tháng 2 năm 1944"
+ *
+ * Input: solarDateString = "YYYY-MM-DD" (từ <input type="date">)
+ * Trả '' nếu input invalid.
+ */
+export function formatDateForKhanText(
+  solarDateString: string,
+  showLunar: boolean
+): string {
+  if (!solarDateString) return '';
+  
+  const date = new Date(solarDateString + 'T00:00:00');
+  if (isNaN(date.getTime())) return '';
+
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  const solarPart = `ngày ${day} tháng ${month} năm ${year}`;
+
+  if (!showLunar) return solarPart;
+
+  // Lấy âm lịch từ ngày dương
+  const lunarFull = getLunarDateFullString(date);
+  // lunarFull đã có dạng "ngày X tháng Y năm Z" → ghép thành cụm
+  return `${solarPart} dương lịch (tức ${lunarFull} âm lịch)`;
+}

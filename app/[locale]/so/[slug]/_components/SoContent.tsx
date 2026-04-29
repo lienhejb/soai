@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { saveUserVariables } from '@/lib/profile/user-variables';
+import { LunarDatePicker } from '@/components/ui/LunarDatePicker';
 import { updateMyProfilePartial } from '@/lib/profile/actions';
 
 interface MissingVar {
@@ -170,13 +171,35 @@ export function SoContent({
                     {v.label}
                     {v.required && <span className="ml-1 text-rose-500">*</span>}
                   </label>
-                  <input
-                    type={v.type === 'date' ? 'date' : 'text'}
-                    value={form[v.key] ?? ''}
-                    onChange={(e) => setForm((f) => ({ ...f, [v.key]: e.target.value }))}
-                    placeholder={v.placeholder ?? ''}
-                    className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:border-amber-400 focus:outline-none"
-                  />
+                  {v.type === 'date' ? (
+                    <LunarDatePicker
+                      variableKey={v.key}
+                      value={form[v.key] ?? ''}
+                      showLunar={
+                        form[`${v.key}__show_lunar`] === '1'
+                          ? true
+                          : form[`${v.key}__show_lunar`] === '0'
+                          ? false
+                          : null
+                      }
+                      onChange={(date, showLunar) => {
+                        setForm((f) => ({
+                          ...f,
+                          [v.key]: date,
+                          [`${v.key}__show_lunar`]: showLunar ? '1' : '0',
+                        }));
+                      }}
+                      required={v.required}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={form[v.key] ?? ''}
+                      onChange={(e) => setForm((f) => ({ ...f, [v.key]: e.target.value }))}
+                      placeholder={v.placeholder ?? ''}
+                      className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:border-amber-400 focus:outline-none"
+                    />
+                  )}
                   {v.helper_text && (
                     <p className="mt-1 text-xs text-stone-400">{v.helper_text}</p>
                   )}

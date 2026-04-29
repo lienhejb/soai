@@ -15,6 +15,8 @@ import {
   getLunarDateFullString,
   getSolarDateFullString,
   getQuanCaiQuanAtDate,
+  formatDateForKhanText,
+  isBirthDateKey,
 } from '@/lib/lunar';
 import type {
   RequiredVariable,
@@ -60,10 +62,19 @@ export function renderVariables(input: RenderVarsInput): Record<string, string> 
   const result: Record<string, string> = {};
 
   for (const v of requiredVars) {
-    // 1. User input (ưu tiên cao nhất, kể cả chuỗi rỗng admin chấp nhận)
+    // 1. User input (ưu tiên cao nhất)
     const userVal = userInput[v.key];
     if (userVal !== undefined && userVal.trim() !== '') {
-      result[v.key] = userVal.trim();
+      // Biến type='date' → format đặc biệt (cụm "ngày X tháng Y... dương lịch (tức...)")
+      if (v.type === 'date') {
+        const showLunarRaw = userInput[`${v.key}__show_lunar`];
+        const showLunar = showLunarRaw !== undefined
+          ? showLunarRaw === '1'
+          : !isBirthDateKey(v.key); // default: ngày sinh bỏ tick, còn lại tick
+        result[v.key] = formatDateForKhanText(userVal.trim(), showLunar);
+      } else {
+        result[v.key] = userVal.trim();
+      }
       continue;
     }
 
@@ -78,7 +89,16 @@ export function renderVariables(input: RenderVarsInput): Record<string, string> 
 
     // 2b. Lookup user_variables theo key (biến user đã khai trước ở template khác)
     if (userVariables && userVariables[v.key]) {
-      result[v.key] = userVariables[v.key];
+      // Biến type='date' → format đặc biệt
+      if (v.type === 'date') {
+        const showLunarRaw = userVariables[`${v.key}__show_lunar`];
+        const showLunar = showLunarRaw !== undefined
+          ? showLunarRaw === '1'
+          : !isBirthDateKey(v.key);
+        result[v.key] = formatDateForKhanText(userVariables[v.key], showLunar);
+      } else {
+        result[v.key] = userVariables[v.key];
+      }
       continue;
     }
 
