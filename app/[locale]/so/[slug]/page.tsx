@@ -1,3 +1,5 @@
+//app/[locale]/so/[slug]/page.tsx
+
 import { SoContent } from './_components/SoContent';
 import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
@@ -87,19 +89,21 @@ export default async function SoDetailPage({ params }: PageProps) {
   let gender: string | null = null;
 
   let ceremonyAddress: string | null = null;
+  let birthYear: number | null = null;
 if (isGuest) {
   displayName = GUEST_PROFILE.display_name;
   address = GUEST_PROFILE.address;
 } else {
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, address, ceremony_address, gender')
-    .eq('id', user.id)
-    .single();
-  displayName = profile?.display_name || '';
-  address = profile?.address || '[Địa chỉ]';
-  gender = profile?.gender ?? null;
-  ceremonyAddress = profile?.ceremony_address ?? null;
+      .from('profiles')
+      .select('display_name, address, ceremony_address, birth_year, gender')
+      .eq('id', user.id)
+      .single();
+    displayName = profile?.display_name || '';
+    address = profile?.address || '[Địa chỉ]';
+    gender = profile?.gender ?? null;
+    ceremonyAddress = profile?.ceremony_address ?? null;
+    birthYear = profile?.birth_year ?? null;
 }
   const userVariables = isGuest ? {} : await getUserVariables();
 
@@ -113,7 +117,13 @@ if (isGuest) {
   const resolvedVars = renderVariables({
     requiredVars,
     userInput: {},
-    profile: isGuest ? null : { display_name: displayName, address, ceremony_address: ceremonyAddress, gender },
+    profile: isGuest ? null : { 
+      display_name: displayName, 
+      address, 
+      ceremony_address: ceremonyAddress,
+      birth_year: birthYear,
+      gender 
+    },
     userVariables,
     eventDate: new Date(),
   });
@@ -121,7 +131,7 @@ if (isGuest) {
   const rendered = substituteText(fullText, resolvedVars, { keepUnknown: false });
 
   const missingVars = requiredVars.filter(
-    (v: any) => v.required && !resolvedVars[v.key]
+    (v: any) => !resolvedVars[v.key]
   );
 
   // Fetch voices từ DB

@@ -8,6 +8,7 @@ interface MissingVar {
   key: string;
   label: string;
   type: string;
+  required?: boolean;
   placeholder?: string;
   helper_text?: string;
 }
@@ -110,8 +111,10 @@ export function SoContent({
 }
 
   function handleCloseRequest() {
-    // Nếu còn biến required chưa nhập → confirm
-    const stillRequired = pendingMissing.some((v) => !form[v.key]?.trim());
+    // Chỉ chặn close nếu còn biến required: true chưa nhập
+    const stillRequired = pendingMissing.some(
+  (v) => v.required && !form[v.key]?.trim()
+);
     if (stillRequired) {
       setShowCloseConfirm(true);
     } else {
@@ -165,6 +168,7 @@ export function SoContent({
                 <div key={v.key}>
                   <label className="mb-1.5 block text-sm font-medium text-stone-600">
                     {v.label}
+                    {v.required && <span className="ml-1 text-rose-500">*</span>}
                   </label>
                   <input
                     type={v.type === 'date' ? 'date' : 'text'}
