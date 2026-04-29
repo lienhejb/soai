@@ -158,10 +158,10 @@ if (isGuest) {
         ← Trang chủ
       </Link>
 
-      <SoHeader
-        title={template.title}
-        missingCount={missingVars.length}
-      />
+      <h1 className="mb-2 font-serif text-3xl font-bold text-stone-800">
+  {template.title}
+</h1>
+<div className="mb-6 h-[1px] w-16 bg-amber-500/50" />
 
       <SoPlayer
         templateSlug={slug}
