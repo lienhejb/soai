@@ -8,7 +8,12 @@ interface Props {
   sos: UserSo[];
 }
 
+const PREVIEW_LIMIT = 5;
+
 export function SoLibrary({ sos }: Props) {
+  const visibleSos = sos.slice(0, PREVIEW_LIMIT);
+  const hasMore = sos.length > PREVIEW_LIMIT;
+
   return (
     <section className="mt-8 pb-28">
       {/* Heading */}
@@ -16,9 +21,11 @@ export function SoLibrary({ sos }: Props) {
         <h2 className="font-serif text-xl font-bold text-stone-800">
           Sớ Của Tôi
         </h2>
-        <Link href="/so" className="text-xs font-medium text-amber-700 hover:underline">
-          Xem tất cả →
-        </Link>
+        {hasMore && (
+          <Link href="/so" className="text-xs font-medium text-amber-700 hover:underline">
+            Xem tất cả →
+          </Link>
+        )}
       </div>
 
       {sos.length === 0 ? (
@@ -28,9 +35,9 @@ export function SoLibrary({ sos }: Props) {
           </p>
         </div>
       ) : (
-        // Carousel ngang — scroll-snap, ẩn scrollbar
-        <div className="flex gap-3 overflow-x-auto px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {sos.map((so) => (
+        // Grid 2 cột — card cùng kích thước
+        <div className="grid grid-cols-2 gap-3 px-5">
+          {visibleSos.map((so) => (
             <SoCard key={so.user_so_id} so={so} />
           ))}
         </div>
@@ -41,14 +48,14 @@ export function SoLibrary({ sos }: Props) {
 
 function SoCard({ so }: { so: UserSo }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isPending = false; // tất cả template đều click được — sẽ điều hướng sang /so/[slug]
+  const isPending = false;
 
   return (
-    <div className="relative w-40 flex-shrink-0">
+    <div className="relative">
       <Link
         href={isPending ? '#' : `/so/${so.user_so_id}`}
         onClick={(e) => isPending && e.preventDefault()}
-        className={`group block rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition-all ${
+        className={`group flex h-full min-h-[148px] flex-col rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition-all ${
           isPending
             ? 'cursor-not-allowed'
             : 'hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-lg hover:shadow-amber-500/10'
@@ -59,16 +66,15 @@ function SoCard({ so }: { so: UserSo }) {
           <IncenseIcon />
         </div>
 
-        {/* Tên sớ */}
-        <div className="font-serif text-sm font-semibold leading-snug text-stone-800 line-clamp-2">
+        {/* Tên sớ — cố định 2 dòng để mọi card cao bằng nhau */}
+        <div className="font-serif text-sm font-semibold leading-snug text-stone-800 line-clamp-2 min-h-[2.5rem]">
           {so.nickname}
         </div>
 
-        {isPending && (
-          <div className="mt-2 text-[10px] italic text-stone-400">
-  {so.has_rendered ? 'Đã thỉnh' : 'Chưa thỉnh'}
-</div>
-        )}
+        {/* Spacer đẩy trạng thái xuống đáy */}
+        <div className="mt-auto pt-2 text-[10px] italic text-stone-400">
+          {so.has_rendered ? 'Đã thỉnh' : 'Chưa thỉnh'}
+        </div>
       </Link>
 
       {/* Nút ... menu */}
@@ -83,12 +89,7 @@ function SoCard({ so }: { so: UserSo }) {
         </button>
       )}
 
-      {/* Overlay xám nếu pending */}
-      {isPending && (
-        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-stone-100/40" />
-      )}
-
-      {/* Menu dropdown (placeholder) */}
+      {/* Menu dropdown */}
       {menuOpen && !isPending && (
         <div
           className="absolute right-2 top-10 z-10 w-32 rounded-xl border border-stone-200 bg-white py-1 shadow-lg"
