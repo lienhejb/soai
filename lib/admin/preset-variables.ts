@@ -9,6 +9,7 @@ export type VariableType = 'text' | 'date' | 'number' | 'select';
 export type AutoFromProfile = 
   | 'display_name' 
   | 'address' 
+  | 'ceremony_address'
   | 'birth_year' 
   | 'gender'
   | 'display_name_first_word';
@@ -28,6 +29,19 @@ export interface RequiredVariable {
   /** Có bắt buộc user nhập không. */
   required: boolean;
 
+  /**
+ * Resolve auto_from_profile mappings:
+ * - display_name              → profiles.display_name
+ * - address                   → profiles.address (= "Địa chỉ hiện tại")
+ * - ceremony_address          → profiles.ceremony_address
+ *     ⚠️ FALLBACK: nếu profiles.ceremony_address IS NULL
+ *        → return profiles.address (gợi ý "lễ tại nhà")
+ *        → KHÔNG ghi DB tại bước này. UI front-end sẽ hỏi user 
+ *          confirm/sửa, sau đó submit mới UPDATE profiles.ceremony_address.
+ * - birth_year                → profiles.birth_year
+ * - gender                    → profiles.gender
+ * - display_name_first_word   → profiles.display_name.split(' ')[0]
+ */
   /** Auto fill từ profile user (priority cao nhất sau user_input). */
   auto_from_profile?: AutoFromProfile;
 
@@ -68,11 +82,20 @@ export const PRESET_VARIABLES: RequiredVariable[] = [
   },
   {
     key: 'address',
-    label: 'Địa chỉ hành lễ',
+    label: 'Địa chỉ hiện tại của Tín chủ',
     type: 'text',
     required: true,
     auto_from_profile: 'address',
-    helper_text: 'Tự lấy từ profile của user',
+    helper_text: 'Nơi ở hiện tại của Tín chủ. Tự lấy từ profile.',
+  },
+  {
+    key: 'address_ceremony',
+    label: 'Địa chỉ hành lễ',
+    type: 'text',
+    required: true,
+    auto_from_profile: 'ceremony_address',
+    placeholder: 'Nơi đang đứng khấn (nếu khác địa chỉ hiện tại)',
+    helper_text: 'Tự lấy từ profile. Nếu chưa có, gợi ý dùng "Địa chỉ hiện tại". User có thể sửa và lưu lại cho lần sau.',
   },
   // Họ gia đình — user nhập 1 lần, lưu profile
   {

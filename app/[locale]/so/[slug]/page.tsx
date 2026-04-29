@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
+import { SoHeader } from './_components/SoHeader';
 // đã xóa — dùng render-vars thay thế
 import { GUEST_PROFILE } from '@/lib/guest';
 
@@ -85,19 +86,21 @@ export default async function SoDetailPage({ params }: PageProps) {
   let address: string;
   let gender: string | null = null;
 
-  if (isGuest) {
-    displayName = GUEST_PROFILE.display_name;
-    address = GUEST_PROFILE.address;
-  } else {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name, address, gender')
-      .eq('id', user.id)
-      .single();
-    displayName = profile?.display_name || '';
-    address = profile?.address || '[Địa chỉ]';
-    gender = profile?.gender ?? null;
-  }
+  let ceremonyAddress: string | null = null;
+if (isGuest) {
+  displayName = GUEST_PROFILE.display_name;
+  address = GUEST_PROFILE.address;
+} else {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, address, ceremony_address, gender')
+    .eq('id', user.id)
+    .single();
+  displayName = profile?.display_name || '';
+  address = profile?.address || '[Địa chỉ]';
+  gender = profile?.gender ?? null;
+  ceremonyAddress = profile?.ceremony_address ?? null;
+}
 
   const fullText = (template.template_segments ?? [])
     .map((s) => s.text)
@@ -109,11 +112,16 @@ export default async function SoDetailPage({ params }: PageProps) {
   const resolvedVars = renderVariables({
     requiredVars,
     userInput: {},
-    profile: isGuest ? null : { display_name: displayName, address, gender },
+    profile: isGuest ? null : { 
+      display_name: displayName, 
+      address, 
+      ceremony_address: ceremonyAddress,
+      gender 
+    },
     eventDate: new Date(),
   });
 
-  const rendered = substituteText(fullText, resolvedVars, { keepUnknown: true });
+  const rendered = substituteText(fullText, resolvedVars, { keepUnknown: false });
 
   const missingVars = requiredVars.filter(
     (v: any) => v.required && !resolvedVars[v.key]
@@ -151,10 +159,10 @@ export default async function SoDetailPage({ params }: PageProps) {
         ← Trang chủ
       </Link>
 
-      <h1 className="mb-2 font-serif text-3xl font-bold text-stone-800">
-        {template.title}
-      </h1>
-      <div className="mb-6 h-[1px] w-16 bg-amber-500/50" />
+      <SoHeader
+        title={template.title}
+        missingCount={missingVars.length}
+      />
 
       <SoPlayer
         templateSlug={slug}
@@ -172,9 +180,12 @@ export default async function SoDetailPage({ params }: PageProps) {
         <SoContent
           rawText={fullText}
           serverRendered={rendered}
-        isGuest={isGuest}
-        resolvedVars={resolvedVars}
-        missingVars={missingVars}
+          isGuest={isGuest}
+          resolvedVars={resolvedVars}
+          missingVars={missingVars}
+          varLabels={Object.fromEntries(
+            (requiredVars as any[]).map((v) => [v.key, v.label])
+          )}
         />
       </div>
     </div>

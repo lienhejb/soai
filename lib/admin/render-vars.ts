@@ -25,6 +25,7 @@ import type {
 export interface UserProfile {
   display_name?: string | null;
   address?: string | null;
+  ceremony_address?: string | null;
   birth_year?: number | null;
   gender?: string | null;
 }
@@ -109,6 +110,10 @@ function resolveFromProfile(
       return profile.display_name?.trim() || null;
     case 'address':
       return profile.address?.trim() || null;
+    case 'ceremony_address':
+      // Fallback: nếu chưa khai → dùng address (gợi ý "lễ tại nhà"). 
+      // UI sẽ hỏi user confirm/sửa, sau đó UPDATE profiles.ceremony_address.
+      return profile.ceremony_address?.trim() || profile.address?.trim() || null;
     case 'birth_year':
       return profile.birth_year ? String(profile.birth_year) : null;
     case 'gender':
