@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { SoPlayer } from './_components/SoPlayer';
 // đã xóa — dùng render-vars thay thế
 import { GUEST_PROFILE } from '@/lib/guest';
+import { getUserVariables } from '@/lib/profile/user-variables';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,6 +101,7 @@ if (isGuest) {
   gender = profile?.gender ?? null;
   ceremonyAddress = profile?.ceremony_address ?? null;
 }
+  const userVariables = isGuest ? {} : await getUserVariables();
 
   const fullText = (template.template_segments ?? [])
     .map((s) => s.text)
@@ -111,12 +113,8 @@ if (isGuest) {
   const resolvedVars = renderVariables({
     requiredVars,
     userInput: {},
-    profile: isGuest ? null : { 
-      display_name: displayName, 
-      address, 
-      ceremony_address: ceremonyAddress,
-      gender 
-    },
+    profile: isGuest ? null : { display_name: displayName, address, ceremony_address: ceremonyAddress, gender },
+    userVariables,
     eventDate: new Date(),
   });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { saveUserVariables } from '@/lib/profile/user-variables';
 import { updateMyProfilePartial } from '@/lib/profile/actions';
 
 interface MissingVar {
@@ -99,11 +100,8 @@ export function SoContent({
   setSaving(true);
   
   if (!isGuest) {
-    await updateMyProfilePartial({
-      display_name: form['owner_name'],
-      address: form['address'],
-      ceremony_address: form['ceremony_address'],
-    });
+    // Pass nguyên form xuống — server action tự phân loại profile vs user_variables
+    await saveUserVariables(form);
   }
 
   rerender(form);

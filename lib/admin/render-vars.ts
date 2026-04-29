@@ -37,6 +37,8 @@ export interface RenderVarsInput {
   userInput: Record<string, string>;
   /** Profile user. Null nếu là guest. */
   profile: UserProfile | null;
+  /** Map các biến user đã khai trước (từ bảng user_variables). Null nếu guest. */
+  userVariables?: Record<string, string> | null;
   /** Ngày làm lễ (user chọn). Nếu không có → today. Dùng cho lunar/solar/quan compute. */
   eventDate?: Date;
 }
@@ -45,7 +47,7 @@ export interface RenderVarsInput {
  * Resolve toàn bộ vars → map { key: value }.
  */
 export function renderVariables(input: RenderVarsInput): Record<string, string> {
-  const { requiredVars, userInput, profile, eventDate } = input;
+  const { requiredVars, userInput, profile, userVariables, eventDate } = input;
   const date = eventDate ?? new Date();
 
   // Cache quan cai quản — 1 lần per render (3 biến cùng dùng)
@@ -65,13 +67,19 @@ export function renderVariables(input: RenderVarsInput): Record<string, string> 
       continue;
     }
 
-    // 2. Auto từ profile
+    // 2. Auto từ profile (nếu biến có khai báo auto_from_profile)
     if (v.auto_from_profile) {
       const fromProfile = resolveFromProfile(v.auto_from_profile, profile);
       if (fromProfile) {
         result[v.key] = fromProfile;
         continue;
       }
+    }
+
+    // 2b. Lookup user_variables theo key (biến user đã khai trước ở template khác)
+    if (userVariables && userVariables[v.key]) {
+      result[v.key] = userVariables[v.key];
+      continue;
     }
 
     // 3. Auto compute
