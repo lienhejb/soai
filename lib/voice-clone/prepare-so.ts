@@ -118,11 +118,11 @@ export async function prepareRenderedSo(
   });
 
   const vars = {
-    ...resolvedVars,
-    // Legacy biến không nằm trong required_variables nhưng có thể dùng trong segments cũ
-    family_surname: familySurname,
-    ...getDateStringsForSo(),
-  };
+  ...resolvedVars,
+  // Fallback cho segments cũ chưa migrate sang declare biến đầy đủ
+  family_surname: resolvedVars.family_surname || familySurname,
+  ...getDateStringsForSo(),
+};
 
   console.log('[prepare-so] vars built:', JSON.stringify(vars, null, 2));
   console.log('[prepare-so] family_surname value:', vars.family_surname);
